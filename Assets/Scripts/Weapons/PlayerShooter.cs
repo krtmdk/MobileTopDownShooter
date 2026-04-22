@@ -13,77 +13,42 @@ public class PlayerShooter : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Transform firePoint;
-    // Точка, из которой создаются пули.
-
     [SerializeField] private GameObject projectilePrefab;
-    // Prefab пули.
-
     [SerializeField] private PlayerInputReader inputReader;
-    // Ссылка на источник ввода.
+    [SerializeField] private Animator playerAnimator;
+
+    [Header("Weapon Visuals")]
+    [SerializeField] private GameObject rifleVisual;
+    [SerializeField] private GameObject shotgunVisual;
 
     [Header("Current Weapon")]
     [SerializeField] private WeaponType currentWeapon = WeaponType.Rifle;
-    // Текущее выбранное оружие.
 
     [Header("Rifle Settings")]
     [SerializeField] private float rifleFireCooldown = 0.12f;
-    // Задержка между выстрелами автомата.
-
     [SerializeField] private int rifleDamage = 1;
-    // Урон автомата.
-
     [SerializeField] private int rifleMaxAmmo = 20;
-    // Размер магазина автомата.
-
     [SerializeField] private float rifleReloadTime = 1.5f;
-    // Время перезарядки автомата.
-
     [SerializeField] private float rifleStandingSpreadAngle = 3f;
-    // Разброс автомата, если игрок стоит.
-
     [SerializeField] private float rifleMovingSpreadAngle = 15f;
-    // Разброс автомата, если игрок движется.
 
     [Header("Shotgun Settings")]
     [SerializeField] private float shotgunFireCooldown = 0.8f;
-    // Задержка между выстрелами дробовика.
-
     [SerializeField] private int shotgunDamage = 1;
-    // Урон одной дробины.
-
     [SerializeField] private int shotgunPelletCount = 6;
-    // Количество дробин за один выстрел.
-
     [SerializeField] private int shotgunMaxAmmo = 6;
-    // Размер магазина дробовика.
-
     [SerializeField] private float shotgunReloadTime = 2f;
-    // Время перезарядки дробовика.
-
     [SerializeField] private float shotgunStandingSpreadAngle = 10f;
-    // Разброс дробовика, если игрок стоит.
-
     [SerializeField] private float shotgunMovingSpreadAngle = 20f;
-    // Разброс дробовика, если игрок движется.
 
     [Header("Movement Accuracy Settings")]
     [SerializeField] private float movingSpeedThreshold = 0.1f;
-    // Порог скорости, после которого считаем, что игрок движется.
 
     private int currentAmmo;
-    // Текущее количество патронов в магазине.
-
     private bool isReloading;
-    // Идёт ли сейчас перезарядка.
-
     private float currentCooldown;
-    // Остаток времени до следующего выстрела.
-
     private Collider playerCollider;
-    // Коллайдер игрока.
-
     private Rigidbody playerRigidbody;
-    // Rigidbody игрока.
 
     private void Awake()
     {
@@ -95,8 +60,8 @@ public class PlayerShooter : MonoBehaviour
             inputReader = GetComponent<PlayerInputReader>();
         }
 
-        // На старте заполняем магазин текущего оружия.
         currentAmmo = GetCurrentWeaponMaxAmmo();
+        UpdateWeaponVisuals();
     }
 
     private void Update()
@@ -158,25 +123,21 @@ public class PlayerShooter : MonoBehaviour
             return;
         }
 
-        // Во время перезарядки стрелять нельзя.
         if (isReloading)
         {
             return;
         }
 
-        // Если кнопка стрельбы не активна, не стреляем.
         if (!inputReader.IsShooting)
         {
             return;
         }
 
-        // Если кулдаун ещё не закончился, не стреляем.
         if (currentCooldown > 0f)
         {
             return;
         }
 
-        // Если патронов нет, пытаемся начать перезарядку.
         if (currentAmmo <= 0)
         {
             TryReload();
@@ -205,14 +166,18 @@ public class PlayerShooter : MonoBehaviour
                 ShootShotgun(isMoving);
                 break;
         }
+
+        if (playerAnimator != null)
+        {
+            playerAnimator.ResetTrigger("Shoot");
+            playerAnimator.SetTrigger("Shoot");
+        }
     }
 
     private void ShootRifle(bool isMoving)
     {
         float spreadAngle = isMoving ? rifleMovingSpreadAngle : rifleStandingSpreadAngle;
-
         SpawnProjectileWithSpread(spreadAngle, rifleDamage);
-
         currentAmmo--;
         currentCooldown = rifleFireCooldown;
     }
@@ -232,8 +197,6 @@ public class PlayerShooter : MonoBehaviour
 
     private void SpawnProjectileWithSpread(float spreadAngle, int damage)
     {
-        // Добавляем разброс только по горизонтали,
-        // чтобы top-down стрельба читалась стабильнее.
         Quaternion spreadRotation = Quaternion.Euler(
             0f,
             Random.Range(-spreadAngle, spreadAngle),
@@ -241,9 +204,6 @@ public class PlayerShooter : MonoBehaviour
         );
 
         Quaternion finalRotation = firePoint.rotation * spreadRotation;
-
-        // Немного смещаем точку появления, чтобы снаряд не рождался
-        // слишком глубоко внутри игрока.
         Vector3 spawnPosition = firePoint.position + finalRotation * Vector3.forward * 0.2f;
 
         GameObject spawnedProjectile = Instantiate(
@@ -254,7 +214,6 @@ public class PlayerShooter : MonoBehaviour
 
         Collider projectileCollider = spawnedProjectile.GetComponent<Collider>();
 
-        // Игнорируем столкновение своей пули с игроком.
         if (projectileCollider != null && playerCollider != null)
         {
             Physics.IgnoreCollision(projectileCollider, playerCollider);
@@ -287,6 +246,12 @@ public class PlayerShooter : MonoBehaviour
     {
         isReloading = true;
 
+        if (playerAnimator != null)
+        {
+            playerAnimator.ResetTrigger("Reload");
+            playerAnimator.SetTrigger("Reload");
+        }
+
         yield return new WaitForSeconds(GetCurrentWeaponReloadTime());
 
         currentAmmo = GetCurrentWeaponMaxAmmo();
@@ -300,13 +265,27 @@ public class PlayerShooter : MonoBehaviour
             return;
         }
 
-        // Если шла перезарядка, прерываем её.
         StopAllCoroutines();
         isReloading = false;
 
         currentWeapon = newWeapon;
         currentAmmo = GetCurrentWeaponMaxAmmo();
         currentCooldown = 0f;
+
+        UpdateWeaponVisuals();
+    }
+
+    private void UpdateWeaponVisuals()
+    {
+        if (rifleVisual != null)
+        {
+            rifleVisual.SetActive(currentWeapon == WeaponType.Rifle);
+        }
+
+        if (shotgunVisual != null)
+        {
+            shotgunVisual.SetActive(currentWeapon == WeaponType.Shotgun);
+        }
     }
 
     private bool IsPlayerMoving()
@@ -328,7 +307,6 @@ public class PlayerShooter : MonoBehaviour
         {
             case WeaponType.Rifle:
                 return rifleMaxAmmo;
-
             case WeaponType.Shotgun:
                 return shotgunMaxAmmo;
         }
@@ -342,15 +320,12 @@ public class PlayerShooter : MonoBehaviour
         {
             case WeaponType.Rifle:
                 return rifleReloadTime;
-
             case WeaponType.Shotgun:
                 return shotgunReloadTime;
         }
 
         return rifleReloadTime;
     }
-
-    // ===== Методы для UI =====
 
     public int GetCurrentAmmo()
     {

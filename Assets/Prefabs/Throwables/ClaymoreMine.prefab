@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   triggerRadius: 2
-  explosionRadius: 3
+  explosionRadius: 5
   explosionDamage: 5
   explosionAngle: 90
   triggerDelay: 0.2

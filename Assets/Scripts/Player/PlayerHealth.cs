@@ -1,45 +1,48 @@
+using System.Collections;
 using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Health Settings")]
     [SerializeField] private int maxHealth = 10;
-    // Максимальное здоровье игрока.
 
     [Header("UI References")]
     [SerializeField] private GameOverUI gameOverUI;
-    // Ссылка на UI-скрипт, который показывает экран поражения.
+
+    [Header("Animation References")]
+    [SerializeField] private Animator playerAnimator;
+    [SerializeField] private PlayerInputReader inputReader;
+
+    [Header("Death Settings")]
+    [SerializeField] private float deathAnimationDuration = 1.2f;
 
     private int currentHealth;
-    // Текущее здоровье игрока.
-
     private bool isDead;
-    // Флаг, который показывает, умер игрок или нет.
 
     private void Awake()
     {
-        // При старте игрок получает полное здоровье.
         currentHealth = maxHealth;
+
+        if (inputReader == null)
+        {
+            inputReader = GetComponent<PlayerInputReader>();
+        }
     }
 
     public void TakeDamage(int damage)
     {
-        // Если игрок уже мёртв, не принимаем новый урон.
         if (isDead)
         {
             return;
         }
 
-        // Защита от некорректного значения урона.
         if (damage <= 0)
         {
             return;
         }
 
-        // Уменьшаем здоровье.
         currentHealth -= damage;
 
-        // Не даём здоровью уйти ниже нуля.
         if (currentHealth < 0)
         {
             currentHealth = 0;
@@ -47,7 +50,6 @@ public class PlayerHealth : MonoBehaviour
 
         Debug.Log("Player took damage. Current health: " + currentHealth);
 
-        // Если здоровье закончилось, игрок умирает.
         if (currentHealth <= 0)
         {
             Die();
@@ -56,7 +58,6 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
-        // Защита от повторной смерти.
         if (isDead)
         {
             return;
@@ -66,13 +67,40 @@ public class PlayerHealth : MonoBehaviour
 
         Debug.Log("Player is dead.");
 
-        // Сначала показываем экран поражения.
+        if (inputReader != null)
+        {
+            inputReader.SetInputEnabled(false);
+        }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            // Сначала полностью останавливаем Rigidbody.
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            // Только потом переводим его в kinematic.
+            rb.isKinematic = true;
+        }
+
+        if (playerAnimator != null)
+        {
+            playerAnimator.ResetTrigger("Death");
+            playerAnimator.SetTrigger("Death");
+        }
+
+        StartCoroutine(DeathRoutine());
+    }
+
+    private IEnumerator DeathRoutine()
+    {
+        yield return new WaitForSeconds(deathAnimationDuration);
+
         if (gameOverUI != null)
         {
             gameOverUI.ShowGameOver();
         }
 
-        // Потом выключаем игрока.
         gameObject.SetActive(false);
     }
 
@@ -88,22 +116,18 @@ public class PlayerHealth : MonoBehaviour
 
     public void Heal(int amount)
     {
-        // Если игрок уже мёртв, не лечим
         if (isDead)
         {
             return;
         }
 
-        // Защита от некорректного значения
         if (amount <= 0)
         {
             return;
         }
 
-        // Добавляем здоровье
         currentHealth += amount;
 
-        // Ограничиваем максимумом
         if (currentHealth > maxHealth)
         {
             currentHealth = maxHealth;
