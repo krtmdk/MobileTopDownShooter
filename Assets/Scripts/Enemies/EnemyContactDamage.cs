@@ -9,8 +9,20 @@ public class EnemyContactDamage : MonoBehaviour
     [SerializeField] private float damageCooldown = 1f;
     // Время между ударами.
 
+    [Header("Animation References")]
+    [SerializeField] private EnemyAnimator enemyAnimator;
+    // Скрипт, который запускает анимации врага.
+
     private float currentCooldown;
     // Остаток времени до следующего удара.
+
+    private void Awake()
+    {
+        if (enemyAnimator == null)
+        {
+            enemyAnimator = GetComponent<EnemyAnimator>();
+        }
+    }
 
     private void Update()
     {
@@ -38,13 +50,19 @@ public class EnemyContactDamage : MonoBehaviour
             return;
         }
 
-        // Проверяем, есть ли здоровье игрока на объекте столкновения.
+        // Проверяем здоровье игрока на объекте столкновения.
         PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
 
         // Если столкнулись не с игроком, ничего не делаем.
         if (playerHealth == null)
         {
             return;
+        }
+
+        // Запускаем анимацию атаки.
+        if (enemyAnimator != null)
+        {
+            enemyAnimator.PlayAttack();
         }
 
         // Наносим игроку урон.
