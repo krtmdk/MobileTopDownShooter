@@ -1,10 +1,14 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 public class EnemyAnimator : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Rigidbody enemyRigidbody;
-    // Rigidbody врага. По нему считаем скорость движения.
+    // Rigidbody врага. Используется как запасной вариант.
+
+    [SerializeField] private NavMeshAgent navMeshAgent;
+    // NavMeshAgent врага. Если есть, скорость берём из него.
 
     [SerializeField] private Animator enemyAnimator;
     // Animator модели врага.
@@ -17,6 +21,11 @@ public class EnemyAnimator : MonoBehaviour
         if (enemyRigidbody == null)
         {
             enemyRigidbody = GetComponent<Rigidbody>();
+        }
+
+        if (navMeshAgent == null)
+        {
+            navMeshAgent = GetComponent<NavMeshAgent>();
         }
 
         if (riotCharge == null)
@@ -33,15 +42,25 @@ public class EnemyAnimator : MonoBehaviour
 
     private void UpdateMovementAnimation()
     {
-        if (enemyRigidbody == null || enemyAnimator == null)
+        if (enemyAnimator == null)
         {
             return;
         }
 
-        Vector3 velocity = enemyRigidbody.velocity;
-        velocity.y = 0f;
+        float speed = 0f;
 
-        float speed = velocity.magnitude;
+        if (navMeshAgent != null && navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+        {
+            Vector3 velocity = navMeshAgent.velocity;
+            velocity.y = 0f;
+            speed = velocity.magnitude;
+        }
+        else if (enemyRigidbody != null)
+        {
+            Vector3 velocity = enemyRigidbody.velocity;
+            velocity.y = 0f;
+            speed = velocity.magnitude;
+        }
 
         enemyAnimator.SetFloat("Speed", speed);
     }

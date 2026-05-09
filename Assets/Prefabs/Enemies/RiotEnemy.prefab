@@ -16,7 +16,10 @@ GameObject:
   - component: {fileID: 7659162508320010130}
   - component: {fileID: 513661013770805448}
   - component: {fileID: 2099572663002589021}
-  m_Layer: 0
+  - component: {fileID: 6569988551053447586}
+  - component: {fileID: 6023518617585662396}
+  - component: {fileID: 5034783794196906761}
+  m_Layer: 8
   m_Name: RiotEnemy
   m_TagString: Enemy
   m_Icon: {fileID: 0}
@@ -84,8 +87,8 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
+  m_UseGravity: 0
+  m_IsKinematic: 1
   m_Interpolate: 1
   m_Constraints: 112
   m_CollisionDetection: 1
@@ -103,17 +106,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 0}
   enemyVisual: {fileID: 5687199549893421830}
-  moveSpeed: 2
-  stopDistance: 1
-  rotationSpeed: 10
-  obstacleCheckDistance: 1.2
-  sideCheckDistance: 1.2
-  obstacleCheckRadius: 0.25
-  sideAvoidanceWeight: 0.9
-  avoidanceLockDuration: 0.8
-  obstacleMask:
-    serializedVersion: 2
-    m_Bits: 59
+  moveSpeed: 3
+  stopDistance: 1.6
+  pathUpdateInterval: 0.15
+  rotationSpeed: 8
 --- !u!114 &4019654928333288030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -126,9 +122,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e5c189e4e2b5654eb92067eba9589fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 3
+  maxHealth: 90
   deathAnimationDuration: 2.5
   enemyAnimator: {fileID: 513661013770805448}
+  hitSounds:
+  - {fileID: 8300000, guid: 3fa36584e3fa7bb40ad05266dda12dea, type: 3}
+  deathSounds:
+  - {fileID: 8300000, guid: bd0b8df2f9dea1840909535450c4184b, type: 3}
+  - {fileID: 8300000, guid: 9f58812e259e92446a626d409cb63523, type: 3}
+  - {fileID: 8300000, guid: 2e06ffae10f61af469c1b8ef53bc553d, type: 3}
+  - {fileID: 8300000, guid: 571df8fa1051cf74992d3f6e34b1325d, type: 3}
+  hitVolume: 0.9
+  deathVolume: 0.3
 --- !u!114 &7659162508320010130
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -141,9 +146,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1de2492cde31ebf43a2530b191b5d36a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 1
-  damageCooldown: 1
+  damage: 14
+  damageCooldown: 1.2
   enemyAnimator: {fileID: 513661013770805448}
+  attackSound: {fileID: 8300000, guid: 506a6d310f65c634ba77d7c7825a92b3, type: 3}
+  attackVolume: 0.7
 --- !u!114 &513661013770805448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -157,6 +164,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyRigidbody: {fileID: 1633429326511680464}
+  navMeshAgent: {fileID: 6569988551053447586}
   enemyAnimator: {fileID: 1229206449863224040}
   riotCharge: {fileID: 2099572663002589021}
 --- !u!114 &2099572663002589021
@@ -172,11 +180,88 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 0}
-  chargeRange: 6
-  chargeSpeed: 10
-  chargeDuration: 0.6
-  chargeCooldown: 4
-  windUpTime: 0.5
+  chargeRange: 9
+  chargeSpeed: 16
+  chargeDuration: 0.75
+  chargeCooldown: 3.5
+  windUpTime: 0.45
+  minChargeDistance: 2.5
+--- !u!195 &6569988551053447586
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2376749427204120711}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3
+  m_Acceleration: 12
+  avoidancePriority: 50
+  m_AngularSpeed: 260
+  m_StoppingDistance: 1.6
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 1.8
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!114 &6023518617585662396
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2376749427204120711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aff77bee9d4ab44eaaaf4c3e3c7ad5e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  navMeshAgent: {fileID: 6569988551053447586}
+  footstepClips:
+  - {fileID: 8300000, guid: 00b14b1aafb5ea749adc80148fad806d, type: 3}
+  - {fileID: 8300000, guid: e1f8bac6d5563804faf8d66cbbe63b5f, type: 3}
+  - {fileID: 8300000, guid: eae563f5eb1d5e345bb3b22bfafb6cbc, type: 3}
+  - {fileID: 8300000, guid: dfd5df4d6f586b845999952d3fd2201c, type: 3}
+  volume: 0.5
+  stepInterval: 0.55
+  minSpeedToPlay: 0.2
+  chanceToHaveFootsteps: 1
+  randomStartDelayMin: 0
+  randomStartDelayMax: 0.4
+  minPitch: 0.85
+  maxPitch: 0.95
+--- !u!114 &5034783794196906761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2376749427204120711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f32d8254e9924c240997a100d9e6b590, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  alertClips:
+  - {fileID: 8300000, guid: cfdb9a540b6751c4ab275a0216f87078, type: 3}
+  - {fileID: 8300000, guid: 0011a6522301c024bbb18b2a8e133c3a, type: 3}
+  alertVolume: 0.5
+  playAlertOnStart: 1
+  idleClips:
+  - {fileID: 8300000, guid: 111df5a0e63695c40906620867eda074, type: 3}
+  - {fileID: 8300000, guid: 79890a9b83f7b214bb3ca2ebb19272f6, type: 3}
+  - {fileID: 8300000, guid: 8a0303d7c95728b4bbaa656050b81b35, type: 3}
+  - {fileID: 8300000, guid: 3366f07a958355a4d98b689e640dc429, type: 3}
+  - {fileID: 8300000, guid: 3cbe430cba15fb245ab4ce081b51ede7, type: 3}
+  idleVolume: 0.35
+  minIdleDelay: 6
+  maxIdleDelay: 12
+  minPitch: 0.75
+  maxPitch: 0.9
 --- !u!1 &3357319610374297584
 GameObject:
   m_ObjectHideFlags: 0
@@ -186,7 +271,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5687199549893421830}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: EnemyVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -221,6 +306,10 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: ead6b3dbc4c41174e9bf7828e9abfe5a, type: 2}
+    - target: {fileID: -9070493210130169274, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -261,9 +350,109 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -7657966619581158213, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -7146521406498821007, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -6370085079684087283, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -6170625038081293824, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -5561550452697079657, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -5195048882033904264, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -4728426434207774260, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -4332706925441422008, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -3542885339558904099, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -3086436065929644917, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -2084811680363313996, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -1781356600409242780, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -1703473491307067327, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -1200856079203341021, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -751476226918971245, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -290750445479886849, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: -203856693384778745, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 9171100556185337, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
       propertyPath: m_Name
       value: RiotEnemy
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1082271958561512970, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1339101018200438765, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2715566404302941441, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2898355158428612036, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 3135921509060577837, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 3948933247560734027, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 5866666021909216657, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
       propertyPath: m_Controller
@@ -272,6 +461,10 @@ PrefabInstance:
     - target: {fileID: 5866666021909216657, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
       propertyPath: m_ApplyRootMotion
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8817898888258712963, guid: 24bd812974569ed47b0e4123fe6c9894, type: 3}
+      propertyPath: m_Layer
+      value: 8
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

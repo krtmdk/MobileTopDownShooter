@@ -18,16 +18,15 @@ public class WaveManager : MonoBehaviour
     // UI победы.
 
     [Header("Wave Settings")]
-    [SerializeField] private int maxWaves = 6;
+    [SerializeField] private int maxWaves = 5;
     // Общее количество волн.
 
-    [SerializeField] private int[] killsRequiredPerWave = new int[] { 50, 55, 60, 60, 65, 70 };
+    [SerializeField] private int[] killsRequiredPerWave = new int[] { 12, 18, 24, 30, 35 };
     // Сколько убийств нужно для каждой волны.
-    // Индекс 0 = первая волна, индекс 1 = вторая и т.д.
+    // 5 волн: коротко, понятно, нормально для защиты.
 
-    [Header("Intermission Settings")]
-    [SerializeField] private float intermissionDuration = 35f;
-    // Время передышки между волнами.
+    [SerializeField] private float intermissionDuration = 12f;
+    // Передышка между волнами.
 
     private int currentWave = 1;
     // Текущий номер волны.
@@ -96,40 +95,63 @@ public class WaveManager : MonoBehaviour
     // Этот метод настраивает спавнер под текущую волну.
     private void ConfigureSpawnerForCurrentWave()
     {
-        // Базовые значения для всех волн.
+        // Сначала выключаем опасных врагов.
+        // Потом ниже включаем их только на нужных волнах.
         enemySpawner.SetFastEnemiesAllowed(false);
         enemySpawner.SetHeavyEnemiesAllowed(false);
 
-        // Волны 1-2: только обычные
-        if (currentWave <= 2)
+        // Волна 1: спокойное начало, только обычные враги.
+        if (currentWave == 1)
         {
-            enemySpawner.SetSpawnInterval(1.4f);
-            enemySpawner.SetMaxAliveEnemies(10);
+            enemySpawner.SetSpawnInterval(1.6f);
+            enemySpawner.SetMaxAliveEnemies(6);
             enemySpawner.SetMaxAliveFastEnemies(0);
             enemySpawner.SetMaxAliveHeavyEnemies(0);
             return;
         }
 
-        // Волны 3-4: обычные + быстрые
-        if (currentWave <= 4)
+        // Волна 2: больше обычных врагов, но без быстрых.
+        if (currentWave == 2)
+        {
+            enemySpawner.SetSpawnInterval(1.4f);
+            enemySpawner.SetMaxAliveEnemies(8);
+            enemySpawner.SetMaxAliveFastEnemies(0);
+            enemySpawner.SetMaxAliveHeavyEnemies(0);
+            return;
+        }
+
+        // Волна 3: появляются быстрые враги.
+        if (currentWave == 3)
         {
             enemySpawner.SetFastEnemiesAllowed(true);
 
-            enemySpawner.SetSpawnInterval(1.2f);
-            enemySpawner.SetMaxAliveEnemies(12);
+            enemySpawner.SetSpawnInterval(1.3f);
+            enemySpawner.SetMaxAliveEnemies(9);
+            enemySpawner.SetMaxAliveFastEnemies(2);
+            enemySpawner.SetMaxAliveHeavyEnemies(0);
+            return;
+        }
+
+        // Волна 4: быстрых врагов становится больше, давление растёт.
+        if (currentWave == 4)
+        {
+            enemySpawner.SetFastEnemiesAllowed(true);
+
+            enemySpawner.SetSpawnInterval(1.15f);
+            enemySpawner.SetMaxAliveEnemies(11);
             enemySpawner.SetMaxAliveFastEnemies(3);
             enemySpawner.SetMaxAliveHeavyEnemies(0);
             return;
         }
 
-        // Волны 5-6: обычные + быстрые + громилы
+        // Волна 5: финальная волна, обычные + быстрые + громила.
         enemySpawner.SetFastEnemiesAllowed(true);
         enemySpawner.SetHeavyEnemiesAllowed(true);
 
         enemySpawner.SetSpawnInterval(1.0f);
-        enemySpawner.SetMaxAliveEnemies(14);
+        enemySpawner.SetMaxAliveEnemies(12);
         enemySpawner.SetMaxAliveFastEnemies(3);
-        enemySpawner.SetMaxAliveHeavyEnemies(2);
+        enemySpawner.SetMaxAliveHeavyEnemies(1);
     }
 
     // Этот метод возвращает цель по убийствам для указанной волны.

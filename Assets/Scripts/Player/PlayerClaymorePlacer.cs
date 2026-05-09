@@ -1,8 +1,7 @@
 using UnityEngine;
 
 // Этот скрипт отвечает за установку клеймора.
-// На ПК клеймор ставится по направлению мыши.
-// На мобильном клеймор ставится по направлению drag-наведения.
+// Теперь клейморы ограничены по количеству.
 public class PlayerClaymorePlacer : MonoBehaviour
 {
     [Header("References")]
@@ -22,6 +21,16 @@ public class PlayerClaymorePlacer : MonoBehaviour
     [SerializeField] private float placeCooldown = 3f;
     // Кулдаун между установками.
 
+    [Header("Ammo Settings")]
+    [SerializeField] private int startClaymores = 1;
+    // Сколько клейморов у игрока в начале игры.
+
+    [SerializeField] private int maxClaymores = 2;
+    // Максимум клейморов, который игрок может носить.
+
+    private int currentClaymores;
+    // Текущее количество клейморов.
+
     private float currentCooldown;
     // Остаток кулдауна.
 
@@ -31,6 +40,8 @@ public class PlayerClaymorePlacer : MonoBehaviour
         {
             inputReader = GetComponent<PlayerInputReader>();
         }
+
+        currentClaymores = Mathf.Clamp(startClaymores, 0, maxClaymores);
     }
 
     private void Update()
@@ -39,7 +50,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
         HandleClaymoreInput();
     }
 
-    // Этот метод уменьшает кулдаун каждый кадр.
     private void UpdateCooldown()
     {
         if (currentCooldown > 0f)
@@ -53,7 +63,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
         }
     }
 
-    // Этот метод проверяет, нужно ли сейчас ставить клеймор.
     private void HandleClaymoreInput()
     {
         if (inputReader == null)
@@ -71,6 +80,12 @@ public class PlayerClaymorePlacer : MonoBehaviour
             return;
         }
 
+        // Если клейморов нет, установку не выполняем.
+        if (currentClaymores <= 0)
+        {
+            return;
+        }
+
         Vector3 placementDirection = GetPlacementDirection();
 
         if (placementDirection.sqrMagnitude <= 0.001f)
@@ -81,7 +96,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
         PlaceClaymore(placementDirection);
     }
 
-    // Этот метод создаёт клеймор в нужной позиции и с нужным поворотом.
     private void PlaceClaymore(Vector3 placementDirection)
     {
         if (claymorePrefab == null)
@@ -97,13 +111,14 @@ public class PlayerClaymorePlacer : MonoBehaviour
 
         Instantiate(claymorePrefab, placePosition, placeRotation);
 
+        // Тратим один клеймор после успешной установки.
+        currentClaymores--;
+
         currentCooldown = placeCooldown;
     }
 
-    // Этот метод выбирает направление установки клеймора.
     private Vector3 GetPlacementDirection()
     {
-        // 1. Сначала пытаемся взять специальное направление клеймора.
         if (inputReader != null && inputReader.HasClaymoreAimDirection)
         {
             Vector3 claymoreDirection = inputReader.ClaymoreAimDirection;
@@ -115,7 +130,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
             }
         }
 
-        // 2. Если его нет, используем обычное направление прицеливания.
         if (inputReader != null)
         {
             Vector3 aimDirection = inputReader.AimDirection;
@@ -127,7 +141,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
             }
         }
 
-        // 3. Затем пробуем направление визуала игрока.
         if (playerVisual != null)
         {
             Vector3 visualForward = playerVisual.forward;
@@ -139,7 +152,6 @@ public class PlayerClaymorePlacer : MonoBehaviour
             }
         }
 
-        // 4. Самый запасной вариант.
         Vector3 rootForward = transform.forward;
         rootForward.y = 0f;
 
@@ -151,15 +163,38 @@ public class PlayerClaymorePlacer : MonoBehaviour
         return Vector3.zero;
     }
 
-    // Этот метод нужен UI, чтобы проверить кулдаун.
     public bool IsOnCooldown()
     {
         return currentCooldown > 0f;
     }
 
-    // Этот метод нужен UI, чтобы показать оставшееся время.
     public float GetCurrentCooldown()
     {
         return currentCooldown;
+    }
+
+    public int GetCurrentClaymores()
+    {
+        return currentClaymores;
+    }
+
+    public int GetMaxClaymores()
+    {
+        return maxClaymores;
+    }
+
+    public void AddClaymores(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        currentClaymores += amount;
+
+        if (currentClaymores > maxClaymores)
+        {
+            currentClaymores = maxClaymores;
+        }
     }
 }

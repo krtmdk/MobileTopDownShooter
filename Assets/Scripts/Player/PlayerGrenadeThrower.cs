@@ -1,8 +1,8 @@
 using UnityEngine;
 
 // Ётот скрипт отвечает за бросок гранаты.
-// Ќа ѕ  граната летит по направлению мыши.
-// Ќа мобильном граната летит по направлению drag-наведени€.
+// “еперь гранаты ограничены по количеству.
+// »грок не может бросать гранаты бесконечно.
 public class PlayerGrenadeThrower : MonoBehaviour
 {
     [Header("References")]
@@ -28,6 +28,16 @@ public class PlayerGrenadeThrower : MonoBehaviour
     [SerializeField] private float throwCooldown = 3f;
     //  улдаун между бросками.
 
+    [Header("Ammo Settings")]
+    [SerializeField] private int startGrenades = 2;
+    // —колько гранат у игрока в начале игры.
+
+    [SerializeField] private int maxGrenades = 3;
+    // ћаксимум гранат, который игрок может носить.
+
+    private int currentGrenades;
+    // “екущее количество гранат.
+
     private float currentCooldown;
     // ќстаток кулдауна.
 
@@ -37,6 +47,8 @@ public class PlayerGrenadeThrower : MonoBehaviour
         {
             inputReader = GetComponent<PlayerInputReader>();
         }
+
+        currentGrenades = Mathf.Clamp(startGrenades, 0, maxGrenades);
     }
 
     private void Update()
@@ -45,7 +57,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
         HandleGrenadeInput();
     }
 
-    // Ётот метод уменьшает кулдаун каждый кадр.
     private void UpdateCooldown()
     {
         if (currentCooldown > 0f)
@@ -59,7 +70,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
         }
     }
 
-    // Ётот метод провер€ет, нужно ли сейчас бросать гранату.
     private void HandleGrenadeInput()
     {
         if (inputReader == null)
@@ -77,9 +87,14 @@ public class PlayerGrenadeThrower : MonoBehaviour
             return;
         }
 
+        // ≈сли гранат нет, бросок не выполн€ем.
+        if (currentGrenades <= 0)
+        {
+            return;
+        }
+
         Vector3 throwDirection = GetThrowDirection();
 
-        // ≈сли не удалось получить валидное направление, ничего не делаем.
         if (throwDirection.sqrMagnitude <= 0.001f)
         {
             return;
@@ -88,7 +103,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
         ThrowGrenade(throwDirection);
     }
 
-    // Ётот метод создаЄт гранату и задаЄт ей скорость.
     private void ThrowGrenade(Vector3 throwDirection)
     {
         if (firePoint == null)
@@ -117,13 +131,14 @@ public class PlayerGrenadeThrower : MonoBehaviour
             grenadeRb.velocity = finalVelocity;
         }
 
+        // “ратим одну гранату после успешного броска.
+        currentGrenades--;
+
         currentCooldown = throwCooldown;
     }
 
-    // Ётот метод выбирает направление броска.
     private Vector3 GetThrowDirection()
     {
-        // 1. —начала пытаемс€ вз€ть специальное направление гранаты.
         if (inputReader != null && inputReader.HasGrenadeAimDirection)
         {
             Vector3 grenadeDirection = inputReader.GrenadeAimDirection;
@@ -135,7 +150,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
             }
         }
 
-        // 2. ≈сли его нет, используем обычное направление прицеливани€.
         if (inputReader != null)
         {
             Vector3 aimDirection = inputReader.AimDirection;
@@ -147,7 +161,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
             }
         }
 
-        // 3. «атем пробуем направление визуала игрока.
         if (playerVisual != null)
         {
             Vector3 visualForward = playerVisual.forward;
@@ -159,7 +172,6 @@ public class PlayerGrenadeThrower : MonoBehaviour
             }
         }
 
-        // 4. —амый запасной вариант.
         Vector3 rootForward = transform.forward;
         rootForward.y = 0f;
 
@@ -171,15 +183,38 @@ public class PlayerGrenadeThrower : MonoBehaviour
         return Vector3.zero;
     }
 
-    // Ётот метод нужен UI, чтобы проверить кулдаун.
     public bool IsOnCooldown()
     {
         return currentCooldown > 0f;
     }
 
-    // Ётот метод нужен UI, чтобы показать оставшеес€ врем€.
     public float GetCurrentCooldown()
     {
         return currentCooldown;
+    }
+
+    public int GetCurrentGrenades()
+    {
+        return currentGrenades;
+    }
+
+    public int GetMaxGrenades()
+    {
+        return maxGrenades;
+    }
+
+    public void AddGrenades(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        currentGrenades += amount;
+
+        if (currentGrenades > maxGrenades)
+        {
+            currentGrenades = maxGrenades;
+        }
     }
 }

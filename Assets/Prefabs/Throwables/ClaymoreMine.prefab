@@ -45,11 +45,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0a648a6abe3df2340bee373de124a703, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  triggerRadius: 2
-  explosionRadius: 5
-  explosionDamage: 5
+  triggerRadius: 1
+  explosionRadius: 6
+  explosionDamage: 60
   explosionAngle: 90
   triggerDelay: 0.2
+  explosionSound: {fileID: 8300000, guid: d1d3cb213b2c45a4dbe88ed4a52dd44d, type: 3}
+  explosionVolume: 0.7
 --- !u!1001 &7490447969446332474
 PrefabInstance:
   m_ObjectHideFlags: 0

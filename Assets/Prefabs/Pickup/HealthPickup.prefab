@@ -67,7 +67,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 640fdaeba3cbb8741b32df9fb807b231, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  healAmount: 3
+  pickupType: 0
+  healAmount: 25
+  grenadeAmount: 1
+  claymoreAmount: 1
+  canRespawn: 1
+  respawnTime: 30
+  rotationSpeed: 100
+  healthPickupSound: {fileID: 8300000, guid: 1d53b779c165a5847bb004188787e769, type: 3}
+  itemPickupSound: {fileID: 8300000, guid: 2d39c10301dea0c45a19405a1581085d, type: 3}
+  pickupVolume: 0.8
 --- !u!1001 &8629206591539248781
 PrefabInstance:
   m_ObjectHideFlags: 0

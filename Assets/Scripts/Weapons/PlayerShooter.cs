@@ -17,6 +17,38 @@ public class PlayerShooter : MonoBehaviour
     [SerializeField] private PlayerInputReader inputReader;
     [SerializeField] private Animator playerAnimator;
 
+    [Header("Camera Shake")]
+    [SerializeField] private CameraShake cameraShake;
+    // Ссылка на скрипт тряски камеры
+
+    [SerializeField] private float rifleShakeDuration = 0.05f;
+    // Длительность тряски при выстреле винтовки
+
+    [SerializeField] private float rifleShakeStrength = 0.2f;
+    // Сила тряски при выстреле винтовки
+
+    [SerializeField] private float shotgunShakeDuration = 0.08f;
+    // Длительность тряски при выстреле дробовика
+
+    [SerializeField] private float shotgunShakeStrength = 0.2f;
+    // Сила тряски при выстреле дробовика
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    // AudioSource игрока. Через него проигрываются звуки оружия
+
+    [SerializeField] private AudioClip rifleShotSound;
+    // Звук выстрела винтовки
+
+    [SerializeField] private AudioClip rifleReloadSound;
+    // Звук перезарядки винтовки
+
+    [SerializeField] private AudioClip shotgunShotSound;
+    // Звук выстрела дробовика
+
+    [SerializeField] private AudioClip shotgunReloadSound;
+    // Звук перезарядки дробовика
+
     [Header("Weapon Visuals")]
     [SerializeField] private GameObject rifleVisual;
     [SerializeField] private GameObject shotgunVisual;
@@ -25,16 +57,16 @@ public class PlayerShooter : MonoBehaviour
     [SerializeField] private WeaponType currentWeapon = WeaponType.Rifle;
 
     [Header("Rifle Settings")]
-    [SerializeField] private float rifleFireCooldown = 0.12f;
-    [SerializeField] private int rifleDamage = 1;
-    [SerializeField] private int rifleMaxAmmo = 20;
+    [SerializeField] private float rifleFireCooldown = 0.15f;
+    [SerializeField] private int rifleDamage = 6;
+    [SerializeField] private int rifleMaxAmmo = 30;
     [SerializeField] private float rifleReloadTime = 1.5f;
     [SerializeField] private float rifleStandingSpreadAngle = 3f;
     [SerializeField] private float rifleMovingSpreadAngle = 15f;
 
     [Header("Shotgun Settings")]
     [SerializeField] private float shotgunFireCooldown = 0.8f;
-    [SerializeField] private int shotgunDamage = 1;
+    [SerializeField] private int shotgunDamage = 5;
     [SerializeField] private int shotgunPelletCount = 6;
     [SerializeField] private int shotgunMaxAmmo = 6;
     [SerializeField] private float shotgunReloadTime = 2f;
@@ -58,6 +90,16 @@ public class PlayerShooter : MonoBehaviour
         if (inputReader == null)
         {
             inputReader = GetComponent<PlayerInputReader>();
+        }
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
+
+        if (cameraShake == null)
+        {
+            cameraShake = FindObjectOfType<CameraShake>();
         }
 
         currentAmmo = GetCurrentWeaponMaxAmmo();
@@ -177,9 +219,14 @@ public class PlayerShooter : MonoBehaviour
     private void ShootRifle(bool isMoving)
     {
         float spreadAngle = isMoving ? rifleMovingSpreadAngle : rifleStandingSpreadAngle;
+
         SpawnProjectileWithSpread(spreadAngle, rifleDamage);
+
         currentAmmo--;
         currentCooldown = rifleFireCooldown;
+
+        PlaySound(rifleShotSound);
+        PlayCameraShake(rifleShakeDuration, rifleShakeStrength);
     }
 
     private void ShootShotgun(bool isMoving)
@@ -193,6 +240,9 @@ public class PlayerShooter : MonoBehaviour
 
         currentAmmo--;
         currentCooldown = shotgunFireCooldown;
+
+        PlaySound(shotgunShotSound);
+        PlayCameraShake(shotgunShakeDuration, shotgunShakeStrength);
     }
 
     private void SpawnProjectileWithSpread(float spreadAngle, int damage)
@@ -252,10 +302,51 @@ public class PlayerShooter : MonoBehaviour
             playerAnimator.SetTrigger("Reload");
         }
 
+        PlayReloadSound();
+
         yield return new WaitForSeconds(GetCurrentWeaponReloadTime());
 
         currentAmmo = GetCurrentWeaponMaxAmmo();
         isReloading = false;
+    }
+
+    private void PlayReloadSound()
+    {
+        switch (currentWeapon)
+        {
+            case WeaponType.Rifle:
+                PlaySound(rifleReloadSound);
+                break;
+
+            case WeaponType.Shotgun:
+                PlaySound(shotgunReloadSound);
+                break;
+        }
+    }
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        if (clip == null)
+        {
+            return;
+        }
+
+        audioSource.PlayOneShot(clip);
+    }
+
+    private void PlayCameraShake(float duration, float strength)
+    {
+        if (cameraShake == null)
+        {
+            return;
+        }
+
+        cameraShake.Shake(duration, strength);
     }
 
     private void SwitchWeapon(WeaponType newWeapon)
@@ -307,6 +398,7 @@ public class PlayerShooter : MonoBehaviour
         {
             case WeaponType.Rifle:
                 return rifleMaxAmmo;
+
             case WeaponType.Shotgun:
                 return shotgunMaxAmmo;
         }
@@ -320,6 +412,7 @@ public class PlayerShooter : MonoBehaviour
         {
             case WeaponType.Rifle:
                 return rifleReloadTime;
+
             case WeaponType.Shotgun:
                 return shotgunReloadTime;
         }

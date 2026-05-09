@@ -4,7 +4,7 @@ using UnityEngine;
 public class PlayerHealth : MonoBehaviour
 {
     [Header("Health Settings")]
-    [SerializeField] private int maxHealth = 10;
+    [SerializeField] private int maxHealth = 100;
 
     [Header("UI References")]
     [SerializeField] private GameOverUI gameOverUI;
@@ -12,6 +12,16 @@ public class PlayerHealth : MonoBehaviour
     [Header("Animation References")]
     [SerializeField] private Animator playerAnimator;
     [SerializeField] private PlayerInputReader inputReader;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    // AudioSource игрока.
+
+    [SerializeField] private AudioClip[] hitSounds;
+    // Звуки получения урона. Можно добавить player_hit1 и player_hit2.
+
+    [SerializeField] private AudioClip deathSound;
+    // Звук смерти игрока.
 
     [Header("Death Settings")]
     [SerializeField] private float deathAnimationDuration = 1.2f;
@@ -26,6 +36,11 @@ public class PlayerHealth : MonoBehaviour
         if (inputReader == null)
         {
             inputReader = GetComponent<PlayerInputReader>();
+        }
+
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
         }
     }
 
@@ -53,7 +68,10 @@ public class PlayerHealth : MonoBehaviour
         if (currentHealth <= 0)
         {
             Die();
+            return;
         }
+
+        PlayRandomHitSound();
     }
 
     private void Die()
@@ -67,19 +85,19 @@ public class PlayerHealth : MonoBehaviour
 
         Debug.Log("Player is dead.");
 
+        PlaySound(deathSound);
+
         if (inputReader != null)
         {
             inputReader.SetInputEnabled(false);
         }
 
         Rigidbody rb = GetComponent<Rigidbody>();
+
         if (rb != null)
         {
-            // Сначала полностью останавливаем Rigidbody.
             rb.velocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-
-            // Только потом переводим его в kinematic.
             rb.isKinematic = true;
         }
 
@@ -102,6 +120,32 @@ public class PlayerHealth : MonoBehaviour
         }
 
         gameObject.SetActive(false);
+    }
+
+    private void PlayRandomHitSound()
+    {
+        if (hitSounds == null || hitSounds.Length == 0)
+        {
+            return;
+        }
+
+        int randomIndex = Random.Range(0, hitSounds.Length);
+        PlaySound(hitSounds[randomIndex]);
+    }
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource == null)
+        {
+            return;
+        }
+
+        if (clip == null)
+        {
+            return;
+        }
+
+        audioSource.PlayOneShot(clip);
     }
 
     public int GetCurrentHealth()

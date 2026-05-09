@@ -1,6 +1,7 @@
 using UnityEngine;
+using UnityEngine.AI;
 
-[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(NavMeshAgent))]
 public class EnemyRiotCharge : MonoBehaviour
 {
     [Header("References")]
@@ -22,10 +23,12 @@ public class EnemyRiotCharge : MonoBehaviour
 
     [SerializeField] private float windUpTime = 0.5f;
     // Время подготовки перед рывком.
-    // Это и есть телеграф: громила замирает и готовится.
 
-    private Rigidbody rb;
-    // Rigidbody громилы.
+    [SerializeField] private float minChargeDistance = 2f;
+    // Минимальная дистанция до игрока, чтобы громила не делал рывок в упор.
+
+    private NavMeshAgent agent;
+    // NavMeshAgent громилы. Через него теперь двигаем рывок.
 
     private float currentChargeCooldown;
     // Остаток кулдауна до следующего рывка.
@@ -47,9 +50,8 @@ public class EnemyRiotCharge : MonoBehaviour
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        agent = GetComponent<NavMeshAgent>();
 
-        // Если цель вручную не назначена, ищем игрока по тегу.
         if (target == null)
         {
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
@@ -80,14 +82,6 @@ public class EnemyRiotCharge : MonoBehaviour
         TryStartChargeWindUp();
     }
 
-    private void FixedUpdate()
-    {
-        if (isCharging)
-        {
-            ApplyChargeMovement();
-        }
-    }
-
     private void UpdateCooldown()
     {
         if (currentChargeCooldown > 0f)
@@ -103,7 +97,6 @@ public class EnemyRiotCharge : MonoBehaviour
 
     private void TryStartChargeWindUp()
     {
-        // Если кулдаун ещё не прошёл, ничего не делаем.
         if (currentChargeCooldown > 0f)
         {
             return;
@@ -119,27 +112,21 @@ public class EnemyRiotCharge : MonoBehaviour
 
         float distanceToTarget = directionToTarget.magnitude;
 
-        // Слишком далеко — не начинаем.
         if (distanceToTarget > chargeRange)
         {
             return;
         }
 
-        // Слишком близко — тоже не начинаем.
-        if (distanceToTarget < 2f)
+        if (distanceToTarget < minChargeDistance)
         {
             return;
         }
 
-        // Запоминаем направление будущего рывка.
         chargeDirection = directionToTarget.normalized;
 
-        // Включаем стадию подготовки.
         isWindingUp = true;
         currentWindUpTimer = windUpTime;
 
-        // Кулдаун запускаем уже сейчас,
-        // чтобы не было повторного старта подготовки.
         currentChargeCooldown = chargeCooldown;
     }
 
@@ -160,11 +147,19 @@ public class EnemyRiotCharge : MonoBehaviour
         isWindingUp = false;
         isCharging = true;
         currentChargeTimer = chargeDuration;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
     }
 
     private void UpdateCharge()
     {
         currentChargeTimer -= Time.deltaTime;
+
+        ApplyChargeMovement();
 
         if (currentChargeTimer <= 0f)
         {
@@ -174,18 +169,34 @@ public class EnemyRiotCharge : MonoBehaviour
 
     private void ApplyChargeMovement()
     {
-        Vector3 currentVelocity = rb.velocity;
+        if (agent == null)
+        {
+            return;
+        }
 
-        rb.velocity = new Vector3(
-            chargeDirection.x * chargeSpeed,
-            currentVelocity.y,
-            chargeDirection.z * chargeSpeed
-        );
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        Vector3 movement = chargeDirection * chargeSpeed * Time.deltaTime;
+
+        agent.Move(movement);
     }
 
     private void StopCharge()
     {
         isCharging = false;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+        }
     }
 
     public bool IsCharging()

@@ -46,9 +46,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0df3368dfcc00174aa7ae1acaa7e57f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 3
-  explosionRadius: 3
-  explosionDamage: 3
+  maxHealth: 10
+  explosionRadius: 4
+  explosionDamage: 35
+  explosionSound: {fileID: 8300000, guid: d1d3cb213b2c45a4dbe88ed4a52dd44d, type: 3}
+  explosionVolume: 0.7
 --- !u!136 &4031794577332146265
 CapsuleCollider:
   m_ObjectHideFlags: 0

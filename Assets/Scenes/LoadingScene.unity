@@ -398,11 +398,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameSceneName: Prototype_Game
-  minimumLoadTime: 2
+  minimumLoadTime: 5
   backgroundImage: {fileID: 483727830}
   backgrounds:
   - {fileID: 21300000, guid: 7f823779a61a6c64fbe9b820fadf0d80, type: 3}
   - {fileID: 21300000, guid: aa751b4c65f0ced41a966f11768f5375, type: 3}
+  - {fileID: 21300000, guid: 3727cc0badd408b45b6bc9f2eaa98abe, type: 3}
 --- !u!4 &992826101
 Transform:
   m_ObjectHideFlags: 0

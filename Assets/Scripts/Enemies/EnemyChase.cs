@@ -1,69 +1,47 @@
 using UnityEngine;
+using UnityEngine.AI;
 
-[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(NavMeshAgent))]
 public class EnemyChase : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform target;
     // Цель, за которой враг должен идти.
-    // Если вручную не назначена, враг попытается найти игрока автоматически.
+    // Обычно это Player.
 
     [SerializeField] private Transform enemyVisual;
     // Визуальная часть врага.
-    // Её вращаем отдельно от физического корня.
+    // Её поворачиваем отдельно, чтобы модель смотрела по движению.
 
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 3f;
-    // Скорость движения врага.
+    // Скорость движения врага через NavMeshAgent.
 
     [SerializeField] private float stopDistance = 1.2f;
-    // Дистанция, на которой враг перестаёт приближаться к игроку.
+    // Дистанция, на которой враг перестаёт подходить к игроку.
+
+    [SerializeField] private float pathUpdateInterval = 0.15f;
+    // Как часто враг обновляет путь к игроку.
+    // Не нужно обновлять путь каждый кадр, это лишняя нагрузка.
 
     [Header("Rotation Settings")]
     [SerializeField] private float rotationSpeed = 10f;
-    // Скорость поворота визуала врага.
+    // Скорость поворота визуальной модели врага.
 
-    [Header("Obstacle Avoidance Settings")]
-    [SerializeField] private float obstacleCheckDistance = 1.2f;
-    // На какую дистанцию враг проверяет препятствие прямо перед собой.
-
-    [SerializeField] private float sideCheckDistance = 1f;
-    // На какую дистанцию враг проверяет свободное место справа и слева.
-
-    [SerializeField] private float obstacleCheckRadius = 0.25f;
-    // Радиус SphereCast для проверки препятствий.
-
-    [SerializeField] private float sideAvoidanceWeight = 0.9f;
-    // Насколько сильно враг смещает направление в сторону обхода.
-
-    [SerializeField] private float avoidanceLockDuration = 0.6f;
-    // Сколько времени враг удерживает выбранное направление обхода,
-    // чтобы не дёргаться каждый кадр у углов.
-
-    [SerializeField] private LayerMask obstacleMask = Physics.DefaultRaycastLayers;
-    // Какие слои считаются препятствиями.
-
-    private Rigidbody rb;
-    // Rigidbody физического корня врага.
-
-    private Vector3 moveDirection;
-    // Итоговое направление движения врага.
+    private NavMeshAgent agent;
+    // Компонент NavMeshAgent, который строит путь по NavMesh.
 
     private EnemyRiotCharge riotCharge;
-    // Ссылка на рывок громилы, если он есть.
+    // Скрипт рывка громилы, если он есть.
 
-    private Vector3 lockedAvoidanceDirection;
-    // Запомненное направление обхода препятствия.
-
-    private float currentAvoidanceLockTimer;
-    // Таймер удержания выбранного направления обхода.
+    private float pathUpdateTimer;
+    // Таймер до следующего обновления пути.
 
     private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        agent = GetComponent<NavMeshAgent>();
+        riotCharge = GetComponent<EnemyRiotCharge>();
 
-        // Если ссылка на цель не назначена вручную,
-        // пробуем найти объект с тегом Player.
         if (target == null)
         {
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
@@ -74,175 +52,140 @@ public class EnemyChase : MonoBehaviour
             }
         }
 
-        riotCharge = GetComponent<EnemyRiotCharge>();
+        SetupAgent();
     }
 
     private void Update()
     {
-        UpdateAvoidanceTimer();
-        UpdateDirection();
-        RotateVisual();
-    }
-
-    private void FixedUpdate()
-    {
-        Move();
-    }
-
-    private void UpdateAvoidanceTimer()
-    {
-        if (currentAvoidanceLockTimer > 0f)
+        if (target == null || agent == null)
         {
-            currentAvoidanceLockTimer -= Time.deltaTime;
-
-            if (currentAvoidanceLockTimer < 0f)
-            {
-                currentAvoidanceLockTimer = 0f;
-            }
-        }
-    }
-
-    private void UpdateDirection()
-    {
-        if (target == null)
-        {
-            moveDirection = Vector3.zero;
             return;
         }
 
-        Vector3 directionToTarget = target.position - transform.position;
-        directionToTarget.y = 0f;
-
-        float distanceToTarget = directionToTarget.magnitude;
-
-        if (distanceToTarget <= stopDistance)
-        {
-            moveDirection = Vector3.zero;
-            return;
-        }
-
-        Vector3 desiredDirection = directionToTarget.normalized;
-
-        moveDirection = GetAvoidedDirection(desiredDirection);
-    }
-
-    private Vector3 GetAvoidedDirection(Vector3 desiredDirection)
-    {
-        if (desiredDirection.sqrMagnitude <= 0.001f)
-        {
-            return Vector3.zero;
-        }
-
-        Vector3 castOrigin = transform.position + Vector3.up * 0.35f;
-
-        bool isBlockedForward = Physics.SphereCast(
-            castOrigin,
-            obstacleCheckRadius,
-            desiredDirection,
-            out _,
-            obstacleCheckDistance,
-            obstacleMask,
-            QueryTriggerInteraction.Ignore
-        );
-
-        // Если путь вперёд свободен, сбрасываем обход и идём прямо к игроку.
-        if (!isBlockedForward)
-        {
-            lockedAvoidanceDirection = Vector3.zero;
-            currentAvoidanceLockTimer = 0f;
-            return desiredDirection;
-        }
-
-        // Если ранее уже выбрали направление обхода и таймер ещё жив,
-        // продолжаем идти в эту сторону, чтобы не дёргаться каждый кадр.
-        if (currentAvoidanceLockTimer > 0f && lockedAvoidanceDirection.sqrMagnitude > 0.001f)
-        {
-            return (desiredDirection + lockedAvoidanceDirection * sideAvoidanceWeight).normalized;
-        }
-
-        Vector3 rightDirection = Vector3.Cross(Vector3.up, desiredDirection).normalized;
-        Vector3 leftDirection = -rightDirection;
-
-        bool isBlockedRight = Physics.SphereCast(
-            castOrigin,
-            obstacleCheckRadius,
-            rightDirection,
-            out _,
-            sideCheckDistance,
-            obstacleMask,
-            QueryTriggerInteraction.Ignore
-        );
-
-        bool isBlockedLeft = Physics.SphereCast(
-            castOrigin,
-            obstacleCheckRadius,
-            leftDirection,
-            out _,
-            sideCheckDistance,
-            obstacleMask,
-            QueryTriggerInteraction.Ignore
-        );
-
-        // Если справа свободно, а слева нет — выбираем правый обход.
-        if (!isBlockedRight && isBlockedLeft)
-        {
-            lockedAvoidanceDirection = rightDirection;
-            currentAvoidanceLockTimer = avoidanceLockDuration;
-            return (desiredDirection + rightDirection * sideAvoidanceWeight).normalized;
-        }
-
-        // Если слева свободно, а справа нет — выбираем левый обход.
-        if (!isBlockedLeft && isBlockedRight)
-        {
-            lockedAvoidanceDirection = leftDirection;
-            currentAvoidanceLockTimer = avoidanceLockDuration;
-            return (desiredDirection + leftDirection * sideAvoidanceWeight).normalized;
-        }
-
-        // Если обе стороны свободны, временно выбираем правую сторону.
-        // Это простой и стабильный вариант без лишней случайности.
-        if (!isBlockedRight && !isBlockedLeft)
-        {
-            lockedAvoidanceDirection = rightDirection;
-            currentAvoidanceLockTimer = avoidanceLockDuration;
-            return (desiredDirection + rightDirection * sideAvoidanceWeight).normalized;
-        }
-
-        // Если всё заблокировано, сохраняем ноль.
-        lockedAvoidanceDirection = Vector3.zero;
-        currentAvoidanceLockTimer = 0f;
-
-        return Vector3.zero;
-    }
-
-    private void Move()
-    {
-        // Если враг сейчас делает рывок или готовится к нему,
-        // обычное движение отключаем.
+        // Если громила готовится к рывку или уже делает рывок,
+        // обычное движение NavMeshAgent временно отключаем.
         if (riotCharge != null && (riotCharge.IsCharging() || riotCharge.IsWindingUp()))
         {
+            StopAgentMovement();
+            RotateVisualByVelocity();
             return;
         }
 
-        Vector3 targetVelocity = moveDirection * moveSpeed;
-        Vector3 currentVelocity = rb.velocity;
-
-        rb.velocity = new Vector3(targetVelocity.x, currentVelocity.y, targetVelocity.z);
+        ResumeAgentMovement();
+        UpdatePathTimer();
+        RotateVisualByVelocity();
     }
 
-    private void RotateVisual()
+    private void SetupAgent()
     {
-        if (enemyVisual == null)
+        if (agent == null)
         {
             return;
         }
+
+        agent.speed = moveSpeed;
+        agent.stoppingDistance = stopDistance;
+
+        // Мы сами поворачиваем визуал, поэтому агенту не даём крутить объект.
+        agent.updateRotation = false;
+
+        // Позицию агент обновляет сам.
+        agent.updatePosition = true;
+
+        // Автоторможение помогает врагу не перелетать точку остановки.
+        agent.autoBraking = true;
+    }
+
+    private void UpdatePathTimer()
+    {
+        pathUpdateTimer -= Time.deltaTime;
+
+        if (pathUpdateTimer > 0f)
+        {
+            return;
+        }
+
+        pathUpdateTimer = pathUpdateInterval;
+        UpdateDestination();
+    }
+
+    private void UpdateDestination()
+    {
+        if (target == null || agent == null)
+        {
+            return;
+        }
+
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        agent.SetDestination(target.position);
+    }
+
+    private void StopAgentMovement()
+    {
+        if (agent == null)
+        {
+            return;
+        }
+
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        agent.isStopped = true;
+        agent.ResetPath();
+    }
+
+    private void ResumeAgentMovement()
+    {
+        if (agent == null)
+        {
+            return;
+        }
+
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        agent.isStopped = false;
+    }
+
+    private void RotateVisualByVelocity()
+    {
+        if (enemyVisual == null || agent == null)
+        {
+            return;
+        }
+
+        Vector3 moveDirection = agent.velocity;
+        moveDirection.y = 0f;
 
         if (moveDirection.sqrMagnitude <= 0.001f)
         {
             return;
         }
 
-        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+        Quaternion targetRotation = Quaternion.LookRotation(moveDirection.normalized);
 
         enemyVisual.rotation = Quaternion.Slerp(
             enemyVisual.rotation,
@@ -251,32 +194,16 @@ public class EnemyChase : MonoBehaviour
         );
     }
 
-    private void OnDrawGizmosSelected()
+    public float GetCurrentSpeed()
     {
-        Vector3 forwardDirection = Application.isPlaying ? moveDirection : transform.forward;
-        forwardDirection.y = 0f;
-
-        if (forwardDirection.sqrMagnitude <= 0.001f)
+        if (agent == null)
         {
-            forwardDirection = transform.forward;
-            forwardDirection.y = 0f;
+            return 0f;
         }
 
-        forwardDirection.Normalize();
+        Vector3 velocity = agent.velocity;
+        velocity.y = 0f;
 
-        Vector3 castOrigin = transform.position + Vector3.up * 0.35f;
-
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(castOrigin, castOrigin + forwardDirection * obstacleCheckDistance);
-        Gizmos.DrawWireSphere(castOrigin + forwardDirection * obstacleCheckDistance, obstacleCheckRadius);
-
-        Vector3 rightDirection = Vector3.Cross(Vector3.up, forwardDirection).normalized;
-        Vector3 leftDirection = -rightDirection;
-
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawLine(castOrigin, castOrigin + rightDirection * sideCheckDistance);
-
-        Gizmos.color = Color.magenta;
-        Gizmos.DrawLine(castOrigin, castOrigin + leftDirection * sideCheckDistance);
+        return velocity.magnitude;
     }
 }

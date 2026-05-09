@@ -4,17 +4,16 @@ public class EnemyContactDamage : MonoBehaviour
 {
     [Header("Damage Settings")]
     [SerializeField] private int damage = 1;
-    // Урон за один контактный удар.
-
     [SerializeField] private float damageCooldown = 1f;
-    // Время между ударами.
 
     [Header("Animation References")]
     [SerializeField] private EnemyAnimator enemyAnimator;
-    // Скрипт, который запускает анимации врага.
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip attackSound;
+    [SerializeField] private float attackVolume = 0.7f;
 
     private float currentCooldown;
-    // Остаток времени до следующего удара.
 
     private void Awake()
     {
@@ -25,11 +24,6 @@ public class EnemyContactDamage : MonoBehaviour
     }
 
     private void Update()
-    {
-        UpdateCooldown();
-    }
-
-    private void UpdateCooldown()
     {
         if (currentCooldown > 0f)
         {
@@ -44,31 +38,46 @@ public class EnemyContactDamage : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
-        // Если враг ещё не может ударить снова, выходим.
         if (currentCooldown > 0f)
         {
             return;
         }
 
-        // Проверяем здоровье игрока на объекте столкновения.
         PlayerHealth playerHealth = collision.gameObject.GetComponent<PlayerHealth>();
 
-        // Если столкнулись не с игроком, ничего не делаем.
         if (playerHealth == null)
         {
             return;
         }
 
-        // Запускаем анимацию атаки.
         if (enemyAnimator != null)
         {
             enemyAnimator.PlayAttack();
         }
 
-        // Наносим игроку урон.
+        PlayAttackSound();
+
         playerHealth.TakeDamage(damage);
 
-        // Включаем задержку до следующего удара.
         currentCooldown = damageCooldown;
+    }
+
+    private void PlayAttackSound()
+    {
+        if (attackSound == null)
+        {
+            return;
+        }
+
+        GameObject soundObject = new GameObject("EnemyAttackSound");
+        soundObject.transform.position = transform.position;
+
+        AudioSource source = soundObject.AddComponent<AudioSource>();
+        source.clip = attackSound;
+        source.volume = attackVolume;
+        source.spatialBlend = 0f;
+        source.Play();
+
+        Destroy(soundObject, attackSound.length);
     }
 }

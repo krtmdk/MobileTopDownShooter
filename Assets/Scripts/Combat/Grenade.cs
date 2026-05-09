@@ -5,26 +5,22 @@ public class Grenade : MonoBehaviour
 {
     [Header("Explosion Settings")]
     [SerializeField] private float fuseTime = 1.5f;
-    // Через сколько секунд граната взрывается после броска.
-
     [SerializeField] private float explosionRadius = 3f;
-    // Радиус взрыва гранаты.
-
     [SerializeField] private int explosionDamage = 4;
-    // Урон гранаты по врагам.
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip explosionSound;
+    [SerializeField] private float explosionVolume = 1f;
 
     private bool hasExploded;
-    // Защита от повторного взрыва.
 
     private void Start()
     {
-        // Запускаем таймер взрыва сразу после появления гранаты.
         Invoke(nameof(Explode), fuseTime);
     }
 
     private void Explode()
     {
-        // Если граната уже взорвалась, повторно ничего не делаем.
         if (hasExploded)
         {
             return;
@@ -32,12 +28,12 @@ public class Grenade : MonoBehaviour
 
         hasExploded = true;
 
-        // Находим все коллайдеры в радиусе взрыва.
+        PlayExplosionSound();
+
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
 
         foreach (Collider hitCollider in hitColliders)
         {
-            // Ищем здоровье врага на объекте или у родителя.
             EnemyHealth enemyHealth = hitCollider.GetComponentInParent<EnemyHealth>();
 
             if (enemyHealth != null)
@@ -45,7 +41,6 @@ public class Grenade : MonoBehaviour
                 enemyHealth.TakeDamage(explosionDamage);
             }
 
-            // Урон бочкам (НОВОЕ)
             ExplosiveBarrel barrel = hitCollider.GetComponentInParent<ExplosiveBarrel>();
 
             if (barrel != null)
@@ -54,13 +49,30 @@ public class Grenade : MonoBehaviour
             }
         }
 
-        // После взрыва удаляем объект гранаты.
         Destroy(gameObject);
+    }
+
+    private void PlayExplosionSound()
+    {
+        if (explosionSound == null)
+        {
+            return;
+        }
+
+        GameObject soundObject = new GameObject("ExplosionSound");
+        soundObject.transform.position = transform.position;
+
+        AudioSource source = soundObject.AddComponent<AudioSource>();
+        source.clip = explosionSound;
+        source.volume = explosionVolume;
+        source.spatialBlend = 0f; // 2D звук
+        source.Play();
+
+        Destroy(soundObject, explosionSound.length);
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Показываем радиус взрыва в редакторе.
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, explosionRadius);
     }

@@ -1,43 +1,34 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class EnemyHealth : MonoBehaviour
 {
     [Header("Health Settings")]
     [SerializeField] private int maxHealth = 3;
-    // Максимальное здоровье врага.
 
     [Header("Death Settings")]
     [SerializeField] private float deathAnimationDuration = 1.2f;
-    // Сколько секунд ждать перед удалением врага после запуска анимации смерти.
 
     [Header("Animation References")]
     [SerializeField] private EnemyAnimator enemyAnimator;
-    // Скрипт, который запускает анимации врага.
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip[] hitSounds;
+    [SerializeField] private AudioClip[] deathSounds;
+    [SerializeField] private float hitVolume = 0.7f;
+    [SerializeField] private float deathVolume = 0.8f;
 
     private int currentHealth;
-    // Текущее здоровье врага.
-
     private bool isDead;
-    // Флаг, чтобы не обрабатывать смерть несколько раз.
 
     private KillCounter killCounter;
-    // Ссылка на счётчик убийств.
-
     private Rigidbody rb;
-    // Rigidbody врага.
-
     private Collider enemyCollider;
-    // Основной коллайдер врага.
-
     private EnemyChase enemyChase;
-    // Скрипт движения врага.
-
     private EnemyContactDamage enemyContactDamage;
-    // Скрипт контактного урона врага.
-
     private EnemyRiotCharge enemyRiotCharge;
-    // Скрипт рывка тяжёлого врага. У обычного врага может отсутствовать.
+    private NavMeshAgent navMeshAgent;
 
     private void Awake()
     {
@@ -50,6 +41,7 @@ public class EnemyHealth : MonoBehaviour
         enemyChase = GetComponent<EnemyChase>();
         enemyContactDamage = GetComponent<EnemyContactDamage>();
         enemyRiotCharge = GetComponent<EnemyRiotCharge>();
+        navMeshAgent = GetComponent<NavMeshAgent>();
 
         if (enemyAnimator == null)
         {
@@ -59,21 +51,13 @@ public class EnemyHealth : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        // Если враг уже мёртв, новый урон не обрабатываем.
-        if (isDead)
-        {
-            return;
-        }
-
-        // Если урон некорректный, выходим.
-        if (damage <= 0)
+        if (isDead || damage <= 0)
         {
             return;
         }
 
         currentHealth -= damage;
 
-        // Не даём здоровью уйти ниже нуля.
         if (currentHealth < 0)
         {
             currentHealth = 0;
@@ -82,12 +66,14 @@ public class EnemyHealth : MonoBehaviour
         if (currentHealth <= 0)
         {
             Die();
+            return;
         }
+
+        PlayRandomSound(hitSounds, hitVolume);
     }
 
     private void Die()
     {
-        // Защита от повторной смерти.
         if (isDead)
         {
             return;
@@ -95,45 +81,49 @@ public class EnemyHealth : MonoBehaviour
 
         isDead = true;
 
-        // Засчитываем убийство сразу, чтобы счётчик не ждал удаления объекта.
+        PlayRandomSound(deathSounds, deathVolume);
+
         if (killCounter != null)
         {
             killCounter.RegisterKill();
         }
 
-        // Отключаем движение, чтобы мёртвый враг не продолжал идти.
         if (enemyChase != null)
         {
             enemyChase.enabled = false;
         }
 
-        // Отключаем контактный урон, чтобы мёртвый враг не бил игрока.
         if (enemyContactDamage != null)
         {
             enemyContactDamage.enabled = false;
         }
 
-        // Если это тяжёлый враг с рывком, отключаем рывок.
         if (enemyRiotCharge != null)
         {
             enemyRiotCharge.enabled = false;
         }
 
-        // Отключаем коллайдер, чтобы мёртвый враг не толкал игрока и других врагов.
+        if (navMeshAgent != null)
+        {
+            if (navMeshAgent.enabled && navMeshAgent.isOnNavMesh)
+            {
+                navMeshAgent.isStopped = true;
+                navMeshAgent.ResetPath();
+            }
+
+            navMeshAgent.enabled = false;
+        }
+
         if (enemyCollider != null)
         {
             enemyCollider.enabled = false;
         }
 
-        // Останавливаем физику врага.
         if (rb != null)
         {
-            rb.velocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
             rb.isKinematic = true;
         }
 
-        // Запускаем анимацию смерти.
         if (enemyAnimator != null)
         {
             enemyAnimator.PlayDeath();
@@ -147,5 +137,32 @@ public class EnemyHealth : MonoBehaviour
         yield return new WaitForSeconds(deathAnimationDuration);
 
         Destroy(gameObject);
+    }
+
+    private void PlayRandomSound(AudioClip[] clips, float volume)
+    {
+        if (clips == null || clips.Length == 0)
+        {
+            return;
+        }
+
+        int randomIndex = Random.Range(0, clips.Length);
+        AudioClip selectedClip = clips[randomIndex];
+
+        if (selectedClip == null)
+        {
+            return;
+        }
+
+        GameObject soundObject = new GameObject("EnemySound");
+        soundObject.transform.position = transform.position;
+
+        AudioSource source = soundObject.AddComponent<AudioSource>();
+        source.clip = selectedClip;
+        source.volume = volume;
+        source.spatialBlend = 0f;
+        source.Play();
+
+        Destroy(soundObject, selectedClip.length);
     }
 }

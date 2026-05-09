@@ -4,20 +4,17 @@ public class ExplosiveBarrel : MonoBehaviour
 {
     [Header("Barrel Health")]
     [SerializeField] private int maxHealth = 3;
-    // Сколько урона выдерживает бочка до взрыва.
 
     [Header("Explosion Settings")]
     [SerializeField] private float explosionRadius = 3f;
-    // Радиус взрыва.
-
     [SerializeField] private int explosionDamage = 3;
-    // Урон по врагам и другим бочкам.
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip explosionSound;
+    [SerializeField] private float explosionVolume = 1f;
 
     private int currentHealth;
-    // Текущее здоровье бочки.
-
     private bool hasExploded;
-    // Защита от повторного взрыва.
 
     private void Awake()
     {
@@ -27,11 +24,6 @@ public class ExplosiveBarrel : MonoBehaviour
     public void TakeDamage(int damage)
     {
         if (hasExploded)
-        {
-            return;
-        }
-
-        if (damage <= 0)
         {
             return;
         }
@@ -53,11 +45,12 @@ public class ExplosiveBarrel : MonoBehaviour
 
         hasExploded = true;
 
+        PlayExplosionSound();
+
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
 
         foreach (Collider hitCollider in hitColliders)
         {
-            // Урон врагам
             EnemyHealth enemyHealth = hitCollider.GetComponentInParent<EnemyHealth>();
 
             if (enemyHealth != null)
@@ -65,10 +58,8 @@ public class ExplosiveBarrel : MonoBehaviour
                 enemyHealth.TakeDamage(explosionDamage);
             }
 
-            // Урон другим бочкам
             ExplosiveBarrel otherBarrel = hitCollider.GetComponentInParent<ExplosiveBarrel>();
 
-            // Важно не дамажить саму себя
             if (otherBarrel != null && otherBarrel != this)
             {
                 otherBarrel.TakeDamage(explosionDamage);
@@ -78,9 +69,22 @@ public class ExplosiveBarrel : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void OnDrawGizmosSelected()
+    private void PlayExplosionSound()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, explosionRadius);
+        if (explosionSound == null)
+        {
+            return;
+        }
+
+        GameObject soundObject = new GameObject("ExplosionSound");
+        soundObject.transform.position = transform.position;
+
+        AudioSource source = soundObject.AddComponent<AudioSource>();
+        source.clip = explosionSound;
+        source.volume = explosionVolume;
+        source.spatialBlend = 0f;
+        source.Play();
+
+        Destroy(soundObject, explosionSound.length);
     }
 }
