@@ -6,64 +6,75 @@ public class EnemyChase : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform target;
-    // Цель, за которой враг должен идти.
-    // Обычно это Player.
+    // Цель, за которой враг должен идти
 
     [SerializeField] private Transform enemyVisual;
-    // Визуальная часть врага.
-    // Её поворачиваем отдельно, чтобы модель смотрела по движению.
+    // Визуальная модель врага
 
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 3f;
-    // Скорость движения врага через NavMeshAgent.
+    // Скорость движения врага
 
     [SerializeField] private float stopDistance = 1.2f;
-    // Дистанция, на которой враг перестаёт подходить к игроку.
+    // Дистанция остановки возле игрока
 
-    [SerializeField] private float pathUpdateInterval = 0.15f;
-    // Как часто враг обновляет путь к игроку.
-    // Не нужно обновлять путь каждый кадр, это лишняя нагрузка.
+    [SerializeField] private float pathUpdateInterval = 0.5f;
+    // Как часто враг обновляет путь
 
     [Header("Rotation Settings")]
     [SerializeField] private float rotationSpeed = 10f;
-    // Скорость поворота визуальной модели врага.
+    // Скорость поворота модели врага
+
+    [Header("NavMesh Safety")]
+    [SerializeField] private float navMeshSearchRadius = 5f;
+    // Радиус поиска ближайшего NavMesh возле врага
+
+    [SerializeField] private float targetNavMeshSearchRadius = 3f;
+    // Радиус поиска ближайшего NavMesh возле игрока
 
     private NavMeshAgent agent;
-    // Компонент NavMeshAgent, который строит путь по NavMesh.
+    // NavMeshAgent врага
 
     private EnemyRiotCharge riotCharge;
-    // Скрипт рывка громилы, если он есть.
+    // Скрипт рывка громилы
 
     private float pathUpdateTimer;
-    // Таймер до следующего обновления пути.
+    // Таймер обновления пути
 
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
         riotCharge = GetComponent<EnemyRiotCharge>();
 
-        if (target == null)
-        {
-            GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
-
-            if (playerObject != null)
-            {
-                target = playerObject.transform;
-            }
-        }
-
+        FindTargetIfNeeded();
         SetupAgent();
+    }
+
+    private void Start()
+    {
+        EnsureAgentIsOnNavMesh();
     }
 
     private void Update()
     {
+        FindTargetIfNeeded();
+
         if (target == null || agent == null)
         {
             return;
         }
 
-        // Если громила готовится к рывку или уже делает рывок,
-        // обычное движение NavMeshAgent временно отключаем.
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (!agent.isOnNavMesh)
+        {
+            EnsureAgentIsOnNavMesh();
+            return;
+        }
+
         if (riotCharge != null && (riotCharge.IsCharging() || riotCharge.IsWindingUp()))
         {
             StopAgentMovement();
@@ -85,15 +96,61 @@ public class EnemyChase : MonoBehaviour
 
         agent.speed = moveSpeed;
         agent.stoppingDistance = stopDistance;
-
-        // Мы сами поворачиваем визуал, поэтому агенту не даём крутить объект.
         agent.updateRotation = false;
-
-        // Позицию агент обновляет сам.
         agent.updatePosition = true;
-
-        // Автоторможение помогает врагу не перелетать точку остановки.
         agent.autoBraking = true;
+        agent.autoRepath = true;
+        agent.avoidancePriority = Random.Range(20, 80);
+    }
+
+    private void FindTargetIfNeeded()
+    {
+        if (target != null)
+        {
+            return;
+        }
+
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            target = playerObject.transform;
+        }
+    }
+
+    private void EnsureAgentIsOnNavMesh()
+    {
+        if (agent == null)
+        {
+            return;
+        }
+
+        if (!agent.enabled)
+        {
+            return;
+        }
+
+        if (agent.isOnNavMesh)
+        {
+            return;
+        }
+
+        NavMeshHit hit;
+
+        bool foundPosition = NavMesh.SamplePosition(
+            transform.position,
+            out hit,
+            navMeshSearchRadius,
+            NavMesh.AllAreas
+        );
+
+        if (!foundPosition)
+        {
+            Debug.LogWarning("Enemy cannot find NavMesh near spawn: " + gameObject.name);
+            return;
+        }
+
+        agent.Warp(hit.position);
     }
 
     private void UpdatePathTimer()
@@ -116,32 +173,45 @@ public class EnemyChase : MonoBehaviour
             return;
         }
 
-        if (!agent.enabled)
+        if (!agent.enabled || !agent.isOnNavMesh)
         {
             return;
         }
 
-        if (!agent.isOnNavMesh)
+        NavMeshHit targetHit;
+
+        bool foundTargetPoint = NavMesh.SamplePosition(
+            target.position,
+            out targetHit,
+            targetNavMeshSearchRadius,
+            NavMesh.AllAreas
+        );
+
+        if (!foundTargetPoint)
         {
             return;
         }
 
-        agent.SetDestination(target.position);
+        NavMeshPath path = new NavMeshPath();
+
+        bool pathCalculated = agent.CalculatePath(targetHit.position, path);
+
+        if (!pathCalculated)
+        {
+            return;
+        }
+
+        if (path.status != NavMeshPathStatus.PathComplete)
+        {
+            return;
+        }
+
+        agent.SetDestination(targetHit.position);
     }
 
     private void StopAgentMovement()
     {
-        if (agent == null)
-        {
-            return;
-        }
-
-        if (!agent.enabled)
-        {
-            return;
-        }
-
-        if (!agent.isOnNavMesh)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
         {
             return;
         }
@@ -152,17 +222,7 @@ public class EnemyChase : MonoBehaviour
 
     private void ResumeAgentMovement()
     {
-        if (agent == null)
-        {
-            return;
-        }
-
-        if (!agent.enabled)
-        {
-            return;
-        }
-
-        if (!agent.isOnNavMesh)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
         {
             return;
         }
@@ -196,7 +256,7 @@ public class EnemyChase : MonoBehaviour
 
     public float GetCurrentSpeed()
     {
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
         {
             return 0f;
         }

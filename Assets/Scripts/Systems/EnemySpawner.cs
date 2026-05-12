@@ -1,67 +1,46 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 // Этот скрипт отвечает за спавн врагов.
-// Теперь враги разделены по типам:
-// обычные, быстрые и громилы.
-// WaveManager будет говорить этому спавнеру,
-// какие типы врагов разрешены на текущей волне.
+// Перед созданием врага он ищет ближайшую валидную точку NavMesh,
+// чтобы враг не появлялся вне навигационной зоны.
 public class EnemySpawner : MonoBehaviour
 {
     [Header("Enemy Prefabs")]
     [SerializeField] private GameObject normalEnemyPrefab;
-    // Префаб обычного врага.
-
     [SerializeField] private GameObject fastEnemyPrefab;
-    // Префаб быстрого врага.
-
     [SerializeField] private GameObject heavyEnemyPrefab;
-    // Префаб громилы.
 
     [Header("Spawn Points")]
     [SerializeField] private List<Transform> spawnPoints = new List<Transform>();
-    // Точки появления врагов.
 
     [Header("Spawn Settings")]
     [SerializeField] private float spawnInterval = 2f;
-    // Интервал между попытками спавна.
-
     [SerializeField] private int maxAliveEnemies = 8;
-    // Максимум живых врагов одновременно.
+
+    [Header("NavMesh Spawn Safety")]
+    [SerializeField] private float navMeshSearchRadius = 4f;
+    // Радиус поиска ближайшей точки NavMesh вокруг SpawnPoint
 
     [Header("Dangerous Enemy Limits")]
     [SerializeField] private int maxAliveFastEnemies = 2;
-    // Максимум быстрых врагов одновременно.
-
     [SerializeField] private int maxAliveHeavyEnemies = 1;
-    // Максимум громил одновременно.
 
     [Header("Wave Type Flags")]
     [SerializeField] private bool allowFastEnemies = false;
-    // Можно ли сейчас спавнить быстрых врагов.
-
     [SerializeField] private bool allowHeavyEnemies = false;
-    // Можно ли сейчас спавнить громил.
 
     [Header("Spawn Weights")]
     [SerializeField] private int normalEnemyWeight = 100;
-    // Базовый шанс выбора обычного врага.
-
     [SerializeField] private int fastEnemyWeight = 35;
-    // Базовый шанс выбора быстрого врага.
-
     [SerializeField] private int heavyEnemyWeight = 15;
-    // Базовый шанс выбора громилы.
 
     private float spawnTimer;
-    // Таймер до следующего спавна.
-
     private bool isSpawning = true;
-    // Разрешён ли сейчас спавн.
 
     private void Start()
     {
-        // Чтобы первый спавн мог пройти почти сразу.
         spawnTimer = 0f;
     }
 
@@ -70,7 +49,6 @@ public class EnemySpawner : MonoBehaviour
         UpdateSpawnTimer();
     }
 
-    // Этот метод обновляет таймер спавна и пытается заспавнить врага.
     private void UpdateSpawnTimer()
     {
         if (!isSpawning)
@@ -100,7 +78,6 @@ public class EnemySpawner : MonoBehaviour
         spawnTimer = spawnInterval;
     }
 
-    // Этот метод выбирает тип врага и создаёт его на случайной точке.
     private void SpawnEnemy()
     {
         GameObject selectedEnemyPrefab = GetEnemyPrefabForCurrentWave();
@@ -110,36 +87,83 @@ public class EnemySpawner : MonoBehaviour
             return;
         }
 
-        int randomSpawnIndex = Random.Range(0, spawnPoints.Count);
-        Transform selectedSpawnPoint = spawnPoints[randomSpawnIndex];
+        Transform selectedSpawnPoint = GetRandomSpawnPoint();
 
         if (selectedSpawnPoint == null)
         {
             return;
         }
 
-        Instantiate(
-            selectedEnemyPrefab,
+        Vector3 spawnPosition;
+
+        bool hasValidPosition = TryGetNavMeshSpawnPosition(
             selectedSpawnPoint.position,
+            out spawnPosition
+        );
+
+        if (!hasValidPosition)
+        {
+            Debug.LogWarning("Spawn point is not near NavMesh: " + selectedSpawnPoint.name);
+            return;
+        }
+
+        GameObject spawnedEnemy = Instantiate(
+            selectedEnemyPrefab,
+            spawnPosition,
             selectedSpawnPoint.rotation
         );
+
+        NavMeshAgent agent = spawnedEnemy.GetComponent<NavMeshAgent>();
+
+        if (agent != null && agent.enabled)
+        {
+            agent.Warp(spawnPosition);
+        }
     }
 
-    // Этот метод выбирает, какого врага можно заспавнить на текущей волне.
+    private Transform GetRandomSpawnPoint()
+    {
+        if (spawnPoints == null || spawnPoints.Count == 0)
+        {
+            return null;
+        }
+
+        int randomSpawnIndex = Random.Range(0, spawnPoints.Count);
+        return spawnPoints[randomSpawnIndex];
+    }
+
+    private bool TryGetNavMeshSpawnPosition(Vector3 sourcePosition, out Vector3 spawnPosition)
+    {
+        NavMeshHit hit;
+
+        bool foundPosition = NavMesh.SamplePosition(
+            sourcePosition,
+            out hit,
+            navMeshSearchRadius,
+            NavMesh.AllAreas
+        );
+
+        if (foundPosition)
+        {
+            spawnPosition = hit.position;
+            return true;
+        }
+
+        spawnPosition = sourcePosition;
+        return false;
+    }
+
     private GameObject GetEnemyPrefabForCurrentWave()
     {
         List<GameObject> availablePrefabs = new List<GameObject>();
         List<int> availableWeights = new List<int>();
 
-        // Обычные враги доступны всегда.
         if (normalEnemyPrefab != null)
         {
             availablePrefabs.Add(normalEnemyPrefab);
             availableWeights.Add(Mathf.Max(1, normalEnemyWeight));
         }
 
-        // Быстрых врагов добавляем только если они разрешены
-        // и не превышен лимит одновременно живых быстрых врагов.
         if (allowFastEnemies && fastEnemyPrefab != null)
         {
             if (GetAliveFastEnemyCount() < maxAliveFastEnemies)
@@ -149,8 +173,6 @@ public class EnemySpawner : MonoBehaviour
             }
         }
 
-        // Громил добавляем только если они разрешены
-        // и не превышен лимит одновременно живых громил.
         if (allowHeavyEnemies && heavyEnemyPrefab != null)
         {
             if (GetAliveHeavyEnemyCount() < maxAliveHeavyEnemies)
@@ -168,7 +190,6 @@ public class EnemySpawner : MonoBehaviour
         return GetWeightedRandomPrefab(availablePrefabs, availableWeights);
     }
 
-    // Этот метод выбирает случайный префаб по весам.
     private GameObject GetWeightedRandomPrefab(List<GameObject> prefabs, List<int> weights)
     {
         int totalWeight = 0;
@@ -194,58 +215,49 @@ public class EnemySpawner : MonoBehaviour
         return prefabs[0];
     }
 
-    // Этот метод считает всех живых врагов.
     public int GetAliveEnemyCount()
     {
         EnemyHealth[] aliveEnemies = FindObjectsOfType<EnemyHealth>();
         return aliveEnemies.Length;
     }
 
-    // Этот метод считает всех живых быстрых врагов по тегу.
     public int GetAliveFastEnemyCount()
     {
         GameObject[] fastEnemies = GameObject.FindGameObjectsWithTag("FastEnemy");
         return fastEnemies.Length;
     }
 
-    // Этот метод считает всех живых громил по тегу.
     public int GetAliveHeavyEnemyCount()
     {
         GameObject[] heavyEnemies = GameObject.FindGameObjectsWithTag("HeavyEnemy");
         return heavyEnemies.Length;
     }
 
-    // Этот метод меняет интервал спавна.
     public void SetSpawnInterval(float newSpawnInterval)
     {
         spawnInterval = Mathf.Max(0.2f, newSpawnInterval);
     }
 
-    // Этот метод меняет максимум живых врагов.
     public void SetMaxAliveEnemies(int newMaxAliveEnemies)
     {
         maxAliveEnemies = Mathf.Max(1, newMaxAliveEnemies);
     }
 
-    // Этот метод меняет лимит быстрых врагов.
     public void SetMaxAliveFastEnemies(int newMaxAliveFastEnemies)
     {
         maxAliveFastEnemies = Mathf.Max(0, newMaxAliveFastEnemies);
     }
 
-    // Этот метод меняет лимит громил.
     public void SetMaxAliveHeavyEnemies(int newMaxAliveHeavyEnemies)
     {
         maxAliveHeavyEnemies = Mathf.Max(0, newMaxAliveHeavyEnemies);
     }
 
-    // Этот метод включает или выключает быстрых врагов.
     public void SetFastEnemiesAllowed(bool isAllowed)
     {
         allowFastEnemies = isAllowed;
     }
 
-    // Этот метод включает или выключает громил.
     public void SetHeavyEnemiesAllowed(bool isAllowed)
     {
         allowHeavyEnemies = isAllowed;

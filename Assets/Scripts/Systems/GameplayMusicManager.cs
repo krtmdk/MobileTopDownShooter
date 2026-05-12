@@ -6,38 +6,58 @@ public class GameplayMusicManager : MonoBehaviour
     {
         None,
         Ambient,
-        Battle
+        Battle,
+        FinalBattle
     }
 
     [Header("References")]
     [SerializeField] private WaveManager waveManager;
+    // Менеджер волн
+
     [SerializeField] private PauseMenuUI pauseMenuUI;
+    // Меню паузы
 
     [Header("Audio Sources")]
     [SerializeField] private AudioSource gameplaySource;
-    // Основная музыка игры: бой и перерыв между волнами.
+    // Основная музыка игры: бой, перерыв и финальная волна
 
     [SerializeField] private AudioSource pauseSource;
-    // Отдельный источник музыки паузы.
+    // Отдельная музыка паузы
 
     [Header("Music Lists")]
     [SerializeField] private AudioClip[] ambientMusicList;
-    // Музыка между волнами.
+    // Музыка между волнами
 
     [SerializeField] private AudioClip[] battleMusicList;
-    // Боевые треки.
+    // Обычные боевые треки
+
+    [SerializeField] private AudioClip finalBattleMusic;
+    // Отдельный трек только для финальной волны
 
     [SerializeField] private AudioClip pauseMusic;
-    // Музыка паузы.
+    // Музыка паузы
 
     [Header("Volume")]
     [SerializeField] private float ambientVolume = 0.3f;
+    // Громкость музыки между волнами
+
     [SerializeField] private float battleVolume = 0.45f;
+    // Громкость обычной боевой музыки
+
+    [SerializeField] private float finalBattleVolume = 0.5f;
+    // Громкость финальной боевой музыки
+
     [SerializeField] private float pauseVolume = 0.25f;
+    // Громкость музыки паузы
 
     private GameplayMusicState currentState = GameplayMusicState.None;
+    // Текущее музыкальное состояние
+
     private AudioClip currentGameplayClip;
+    // Текущий основной трек
+
     private bool wasPaused;
+    // Была ли игра на паузе в прошлом кадре
 
     private void Awake()
     {
@@ -93,7 +113,7 @@ public class GameplayMusicManager : MonoBehaviour
     {
         bool isPausedNow = IsPaused();
 
-        // Только что поставили паузу.
+        // Если игрок только что нажал паузу
         if (isPausedNow && !wasPaused)
         {
             if (gameplaySource != null && gameplaySource.isPlaying)
@@ -109,7 +129,7 @@ public class GameplayMusicManager : MonoBehaviour
             }
         }
 
-        // Только что сняли паузу.
+        // Если игрок только что снял паузу
         if (!isPausedNow && wasPaused)
         {
             if (pauseSource != null)
@@ -128,19 +148,65 @@ public class GameplayMusicManager : MonoBehaviour
 
     private void UpdateGameplayMusic()
     {
-        // При победе или поражении текущая музыка продолжает играть.
+        // При победе или поражении текущая музыка продолжает играть
         if (waveManager != null && waveManager.IsMatchFinished())
         {
             return;
         }
 
+        // Между волнами играет ambient
         if (waveManager != null && waveManager.IsIntermission())
         {
             TryPlayGameplayMusic(GameplayMusicState.Ambient, ambientMusicList, ambientVolume);
             return;
         }
 
+        // На финальной волне играет отдельный финальный трек
+        if (IsFinalWave())
+        {
+            TryPlayFinalBattleMusic();
+            return;
+        }
+
+        // На обычных волнах играет обычный боевой трек
         TryPlayGameplayMusic(GameplayMusicState.Battle, battleMusicList, battleVolume);
+    }
+
+    private bool IsFinalWave()
+    {
+        if (waveManager == null)
+        {
+            return false;
+        }
+
+        return waveManager.GetCurrentWave() >= waveManager.GetMaxWaves();
+    }
+
+    private void TryPlayFinalBattleMusic()
+    {
+        if (currentState == GameplayMusicState.FinalBattle)
+        {
+            if (gameplaySource != null)
+            {
+                gameplaySource.volume = finalBattleVolume;
+            }
+
+            return;
+        }
+
+        if (finalBattleMusic == null)
+        {
+            TryPlayGameplayMusic(GameplayMusicState.Battle, battleMusicList, battleVolume);
+            return;
+        }
+
+        currentState = GameplayMusicState.FinalBattle;
+        currentGameplayClip = finalBattleMusic;
+
+        gameplaySource.Stop();
+        gameplaySource.clip = currentGameplayClip;
+        gameplaySource.volume = finalBattleVolume;
+        gameplaySource.Play();
     }
 
     private void TryPlayGameplayMusic(GameplayMusicState newState, AudioClip[] clipList, float volume)

@@ -108,8 +108,10 @@ MonoBehaviour:
   enemyVisual: {fileID: 5687199549893421830}
   moveSpeed: 3
   stopDistance: 1.6
-  pathUpdateInterval: 0.15
+  pathUpdateInterval: 1.5
   rotationSpeed: 8
+  navMeshSearchRadius: 5
+  targetNavMeshSearchRadius: 3
 --- !u!114 &4019654928333288030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -132,8 +134,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 9f58812e259e92446a626d409cb63523, type: 3}
   - {fileID: 8300000, guid: 2e06ffae10f61af469c1b8ef53bc553d, type: 3}
   - {fileID: 8300000, guid: 571df8fa1051cf74992d3f6e34b1325d, type: 3}
-  hitVolume: 0.9
-  deathVolume: 0.3
+  hitVolume: 0.3
+  deathVolume: 0.2
 --- !u!114 &7659162508320010130
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -249,7 +251,7 @@ MonoBehaviour:
   alertClips:
   - {fileID: 8300000, guid: cfdb9a540b6751c4ab275a0216f87078, type: 3}
   - {fileID: 8300000, guid: 0011a6522301c024bbb18b2a8e133c3a, type: 3}
-  alertVolume: 0.5
+  alertVolume: 0.2
   playAlertOnStart: 1
   idleClips:
   - {fileID: 8300000, guid: 111df5a0e63695c40906620867eda074, type: 3}
@@ -257,7 +259,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 8a0303d7c95728b4bbaa656050b81b35, type: 3}
   - {fileID: 8300000, guid: 3366f07a958355a4d98b689e640dc429, type: 3}
   - {fileID: 8300000, guid: 3cbe430cba15fb245ab4ce081b51ede7, type: 3}
-  idleVolume: 0.35
+  idleVolume: 0.25
   minIdleDelay: 6
   maxIdleDelay: 12
   minPitch: 0.75

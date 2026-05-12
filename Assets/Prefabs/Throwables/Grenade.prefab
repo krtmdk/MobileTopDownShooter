@@ -98,6 +98,7 @@ MonoBehaviour:
   fuseTime: 1.2
   explosionRadius: 4.5
   explosionDamage: 40
+  explosionEffectPrefab: {fileID: 8547378296161127060, guid: b4462ccb8bea20b449d0da8f9bb3859a, type: 3}
   explosionSound: {fileID: 8300000, guid: d1d3cb213b2c45a4dbe88ed4a52dd44d, type: 3}
   explosionVolume: 0.7
 --- !u!1001 &4347948789253366051

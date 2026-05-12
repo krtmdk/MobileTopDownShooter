@@ -4,20 +4,37 @@ public class ClaymoreMine : MonoBehaviour
 {
     [Header("Trigger Settings")]
     [SerializeField] private float triggerRadius = 2f;
+    // Радиус обнаружения врага
 
     [Header("Explosion Settings")]
     [SerializeField] private float explosionRadius = 3f;
+    // Радиус урона
+
     [SerializeField] private int explosionDamage = 5;
-    [SerializeField] private float explosionAngle = 90f;
+    // Урон взрыва
+
     [SerializeField] private float triggerDelay = 0.2f;
+    // Задержка перед взрывом после срабатывания
+
+    [Header("Effects")]
+    [SerializeField] private GameObject explosionEffectPrefab;
+    // Prefab визуального эффекта взрыва
 
     [Header("Audio")]
     [SerializeField] private AudioClip explosionSound;
+    // Звук взрыва
+
     [SerializeField] private float explosionVolume = 1f;
+    // Громкость взрыва
 
     private bool hasExploded;
+    // Защита от повторного взрыва
+
     private bool isTriggered;
+    // Мина уже сработала и ждёт задержку
+
     private float currentTriggerTimer;
+    // Таймер задержки перед взрывом
 
     private void Update()
     {
@@ -28,12 +45,7 @@ public class ClaymoreMine : MonoBehaviour
 
         if (isTriggered)
         {
-            currentTriggerTimer -= Time.deltaTime;
-
-            if (currentTriggerTimer <= 0f)
-            {
-                Explode();
-            }
+            UpdateTriggerTimer();
         }
         else
         {
@@ -58,6 +70,16 @@ public class ClaymoreMine : MonoBehaviour
         }
     }
 
+    private void UpdateTriggerTimer()
+    {
+        currentTriggerTimer -= Time.deltaTime;
+
+        if (currentTriggerTimer <= 0f)
+        {
+            Explode();
+        }
+    }
+
     private void Explode()
     {
         if (hasExploded)
@@ -67,26 +89,14 @@ public class ClaymoreMine : MonoBehaviour
 
         hasExploded = true;
 
+        SpawnExplosionEffect();
         PlayExplosionSound();
 
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, explosionRadius);
 
         foreach (Collider hitCollider in hitColliders)
         {
-            Vector3 directionToTarget = hitCollider.transform.position - transform.position;
-            directionToTarget.y = 0f;
-
-            if (directionToTarget.sqrMagnitude <= 0.001f)
-            {
-                continue;
-            }
-
-            float angleToTarget = Vector3.Angle(transform.forward, directionToTarget);
-
-            if (angleToTarget > explosionAngle * 0.5f)
-            {
-                continue;
-            }
+            
 
             EnemyHealth enemyHealth = hitCollider.GetComponentInParent<EnemyHealth>();
 
@@ -104,6 +114,16 @@ public class ClaymoreMine : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    private void SpawnExplosionEffect()
+    {
+        if (explosionEffectPrefab == null)
+        {
+            return;
+        }
+
+        Instantiate(explosionEffectPrefab, transform.position, Quaternion.identity);
     }
 
     private void PlayExplosionSound()

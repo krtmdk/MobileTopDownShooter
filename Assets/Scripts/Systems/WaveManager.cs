@@ -1,53 +1,59 @@
 using UnityEngine;
 
-// Этот скрипт управляет волнами.
-// В этой версии:
-// 1-2 волна: только обычные
-// 3-4 волна: обычные + быстрые
-// 5-6 волна: обычные + быстрые + громилы
+// Этот скрипт управляет волнами врагов.
+// Баланс:
+// 7 волн.
+// Первая волна начинается с 20 убийств.
+// Каждая следующая волна требует на 5 убийств больше.
+// Быстрые враги появляются со 2 волны.
+// Громила появляется с 4 волны.
+// Одновременно на карте не должно быть слишком много врагов.
 public class WaveManager : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private EnemySpawner enemySpawner;
-    // Спавнер врагов.
+    // Спавнер врагов
 
     [SerializeField] private KillCounter killCounter;
-    // Счётчик убийств.
+    // Счётчик убийств
 
     [SerializeField] private VictoryUI victoryUI;
-    // UI победы.
+    // Панель победы
 
     [Header("Wave Settings")]
-    [SerializeField] private int maxWaves = 5;
-    // Общее количество волн.
+    [SerializeField] private int maxWaves = 7;
+    // Общее количество волн
 
-    [SerializeField] private int[] killsRequiredPerWave = new int[] { 12, 18, 24, 30, 35 };
-    // Сколько убийств нужно для каждой волны.
-    // 5 волн: коротко, понятно, нормально для защиты.
+    [SerializeField]
+    private int[] killsRequiredPerWave = new int[]
+    {
+        20, 25, 30, 35, 40, 45, 50
+    };
+    // Сколько убийств нужно сделать на каждой волне
 
-    [SerializeField] private float intermissionDuration = 12f;
-    // Передышка между волнами.
+    [SerializeField] private float intermissionDuration = 16f;
+    // Передышка между волнами
 
     private int currentWave = 1;
-    // Текущий номер волны.
+    // Номер текущей волны
 
     private int killsRequired;
-    // Сколько убийств нужно для текущей волны.
+    // Сколько убийств нужно для текущей волны
 
     private int killsAtWaveStart;
-    // Сколько убийств было на старте текущей волны.
+    // Сколько убийств было на старте волны
 
     private bool isIntermission;
-    // Идёт ли сейчас передышка.
+    // Идёт ли сейчас передышка
 
     private bool isWaveClearing;
-    // Волна уже выполнена по убийствам, но на карте ещё есть враги.
+    // Цель по убийствам выполнена, но на карте ещё остались враги
 
     private bool isMatchFinished;
-    // Матч полностью завершён.
+    // Завершён ли матч
 
     private float intermissionTimer;
-    // Таймер передышки.
+    // Таймер передышки
 
     private void Start()
     {
@@ -76,7 +82,6 @@ public class WaveManager : MonoBehaviour
         UpdateWaveProgress();
     }
 
-    // Этот метод запускает текущую волну.
     private void StartWave()
     {
         isIntermission = false;
@@ -92,69 +97,96 @@ public class WaveManager : MonoBehaviour
         Debug.Log("Wave " + currentWave + " started. Need kills: " + killsRequired);
     }
 
-    // Этот метод настраивает спавнер под текущую волну.
     private void ConfigureSpawnerForCurrentWave()
     {
-        // Сначала выключаем опасных врагов.
-        // Потом ниже включаем их только на нужных волнах.
+        // Сначала выключаем особых врагов.
+        // Потом включаем их только на нужных волнах.
         enemySpawner.SetFastEnemiesAllowed(false);
         enemySpawner.SetHeavyEnemiesAllowed(false);
 
-        // Волна 1: спокойное начало, только обычные враги.
+        // Волна 1: разогрев, только обычные враги.
         if (currentWave == 1)
         {
-            enemySpawner.SetSpawnInterval(1.6f);
-            enemySpawner.SetMaxAliveEnemies(6);
+            enemySpawner.SetSpawnInterval(1.45f);
+            enemySpawner.SetMaxAliveEnemies(7);
             enemySpawner.SetMaxAliveFastEnemies(0);
             enemySpawner.SetMaxAliveHeavyEnemies(0);
             return;
         }
 
-        // Волна 2: больше обычных врагов, но без быстрых.
+        // Волна 2: раннее появление быстрых врагов.
         if (currentWave == 2)
         {
-            enemySpawner.SetSpawnInterval(1.4f);
+            enemySpawner.SetFastEnemiesAllowed(true);
+
+            enemySpawner.SetSpawnInterval(1.35f);
             enemySpawner.SetMaxAliveEnemies(8);
-            enemySpawner.SetMaxAliveFastEnemies(0);
+            enemySpawner.SetMaxAliveFastEnemies(1);
             enemySpawner.SetMaxAliveHeavyEnemies(0);
             return;
         }
 
-        // Волна 3: появляются быстрые враги.
+        // Волна 3: быстрые враги уже становятся частью боя.
         if (currentWave == 3)
         {
             enemySpawner.SetFastEnemiesAllowed(true);
 
-            enemySpawner.SetSpawnInterval(1.3f);
+            enemySpawner.SetSpawnInterval(1.25f);
             enemySpawner.SetMaxAliveEnemies(9);
             enemySpawner.SetMaxAliveFastEnemies(2);
             enemySpawner.SetMaxAliveHeavyEnemies(0);
             return;
         }
 
-        // Волна 4: быстрых врагов становится больше, давление растёт.
+        // Волна 4: первый громила.
         if (currentWave == 4)
         {
             enemySpawner.SetFastEnemiesAllowed(true);
+            enemySpawner.SetHeavyEnemiesAllowed(true);
 
             enemySpawner.SetSpawnInterval(1.15f);
-            enemySpawner.SetMaxAliveEnemies(11);
-            enemySpawner.SetMaxAliveFastEnemies(3);
-            enemySpawner.SetMaxAliveHeavyEnemies(0);
+            enemySpawner.SetMaxAliveEnemies(10);
+            enemySpawner.SetMaxAliveFastEnemies(2);
+            enemySpawner.SetMaxAliveHeavyEnemies(1);
             return;
         }
 
-        // Волна 5: финальная волна, обычные + быстрые + громила.
+        // Волна 5: стабильное давление быстрыми и громилой.
+        if (currentWave == 5)
+        {
+            enemySpawner.SetFastEnemiesAllowed(true);
+            enemySpawner.SetHeavyEnemiesAllowed(true);
+
+            enemySpawner.SetSpawnInterval(1.05f);
+            enemySpawner.SetMaxAliveEnemies(11);
+            enemySpawner.SetMaxAliveFastEnemies(3);
+            enemySpawner.SetMaxAliveHeavyEnemies(1);
+            return;
+        }
+
+        // Волна 6: предфинальное давление.
+        if (currentWave == 6)
+        {
+            enemySpawner.SetFastEnemiesAllowed(true);
+            enemySpawner.SetHeavyEnemiesAllowed(true);
+
+            enemySpawner.SetSpawnInterval(0.95f);
+            enemySpawner.SetMaxAliveEnemies(12);
+            enemySpawner.SetMaxAliveFastEnemies(3);
+            enemySpawner.SetMaxAliveHeavyEnemies(1);
+            return;
+        }
+
+        // Волна 7: финальная волна.
         enemySpawner.SetFastEnemiesAllowed(true);
         enemySpawner.SetHeavyEnemiesAllowed(true);
 
-        enemySpawner.SetSpawnInterval(1.0f);
-        enemySpawner.SetMaxAliveEnemies(12);
+        enemySpawner.SetSpawnInterval(0.9f);
+        enemySpawner.SetMaxAliveEnemies(13);
         enemySpawner.SetMaxAliveFastEnemies(3);
-        enemySpawner.SetMaxAliveHeavyEnemies(1);
+        enemySpawner.SetMaxAliveHeavyEnemies(2);
     }
 
-    // Этот метод возвращает цель по убийствам для указанной волны.
     private int GetKillsRequiredForWave(int waveNumber)
     {
         int index = waveNumber - 1;
@@ -164,11 +196,9 @@ public class WaveManager : MonoBehaviour
             return killsRequiredPerWave[index];
         }
 
-        // Запасной вариант, если массив вдруг не заполнен.
-        return 50 + (waveNumber - 1) * 5;
+        return 20 + (waveNumber - 1) * 5;
     }
 
-    // Этот метод проверяет, выполнена ли цель по убийствам.
     private void UpdateWaveProgress()
     {
         int killsThisWave = GetKillsThisWave();
@@ -182,7 +212,6 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-    // Этот метод ждёт, пока игрок добьёт оставшихся врагов.
     private void UpdateWaveClearing()
     {
         if (enemySpawner.GetAliveEnemyCount() > 0)
@@ -193,7 +222,6 @@ public class WaveManager : MonoBehaviour
         StartIntermission();
     }
 
-    // Этот метод запускает передышку между волнами.
     private void StartIntermission()
     {
         isWaveClearing = false;
@@ -210,7 +238,6 @@ public class WaveManager : MonoBehaviour
         Debug.Log("Wave " + currentWave + " completed. Intermission started.");
     }
 
-    // Этот метод обновляет таймер передышки.
     private void UpdateIntermission()
     {
         intermissionTimer -= Time.deltaTime;
@@ -223,14 +250,12 @@ public class WaveManager : MonoBehaviour
         StartNextWave();
     }
 
-    // Этот метод запускает следующую волну.
     private void StartNextWave()
     {
         currentWave++;
         StartWave();
     }
 
-    // Этот метод завершает матч победой.
     private void FinishMatchWithVictory()
     {
         isMatchFinished = true;
@@ -250,6 +275,11 @@ public class WaveManager : MonoBehaviour
     public int GetCurrentWave()
     {
         return currentWave;
+    }
+
+    public int GetMaxWaves()
+    {
+        return maxWaves;
     }
 
     public int GetKillsRequired()

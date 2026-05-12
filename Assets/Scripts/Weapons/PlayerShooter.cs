@@ -17,6 +17,10 @@ public class PlayerShooter : MonoBehaviour
     [SerializeField] private PlayerInputReader inputReader;
     [SerializeField] private Animator playerAnimator;
 
+    [Header("Effects")]
+    [SerializeField] private MuzzleFlashEffect muzzleFlashEffect;
+    // Ёффект вспышки выстрела
+
     [Header("Camera Shake")]
     [SerializeField] private CameraShake cameraShake;
     // —сылка на скрипт тр€ски камеры
@@ -227,6 +231,7 @@ public class PlayerShooter : MonoBehaviour
 
         PlaySound(rifleShotSound);
         PlayCameraShake(rifleShakeDuration, rifleShakeStrength);
+        PlayMuzzleFlash();
     }
 
     private void ShootShotgun(bool isMoving)
@@ -243,6 +248,7 @@ public class PlayerShooter : MonoBehaviour
 
         PlaySound(shotgunShotSound);
         PlayCameraShake(shotgunShakeDuration, shotgunShakeStrength);
+        PlayMuzzleFlash();
     }
 
     private void SpawnProjectileWithSpread(float spreadAngle, int damage)
@@ -347,6 +353,16 @@ public class PlayerShooter : MonoBehaviour
         }
 
         cameraShake.Shake(duration, strength);
+    }
+
+    private void PlayMuzzleFlash()
+    {
+        if (muzzleFlashEffect == null)
+        {
+            return;
+        }
+
+        muzzleFlashEffect.Play();
     }
 
     private void SwitchWeapon(WeaponType newWeapon)

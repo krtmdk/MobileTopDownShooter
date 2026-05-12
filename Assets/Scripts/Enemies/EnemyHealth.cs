@@ -63,6 +63,7 @@ public class EnemyHealth : MonoBehaviour
             currentHealth = 0;
         }
 
+
         if (currentHealth <= 0)
         {
             Die();
@@ -71,6 +72,7 @@ public class EnemyHealth : MonoBehaviour
 
         PlayRandomSound(hitSounds, hitVolume);
     }
+    
 
     private void Die()
     {
