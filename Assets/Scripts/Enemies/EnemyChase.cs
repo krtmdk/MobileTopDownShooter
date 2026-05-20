@@ -12,17 +12,17 @@ public class EnemyChase : MonoBehaviour
     // Визуальная модель врага
 
     [Header("Movement Settings")]
-    [SerializeField] private float moveSpeed = 3f;
-    // Скорость движения врага
+    [SerializeField] private float moveSpeed = 2.6f;
+    // Скорость обычного преследования
 
-    [SerializeField] private float stopDistance = 1.2f;
+    [SerializeField] private float stopDistance = 1.4f;
     // Дистанция остановки возле игрока
 
-    [SerializeField] private float pathUpdateInterval = 0.5f;
+    [SerializeField] private float pathUpdateInterval = 0.25f;
     // Как часто враг обновляет путь
 
     [Header("Rotation Settings")]
-    [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] private float rotationSpeed = 14f;
     // Скорость поворота модели врага
 
     [Header("NavMesh Safety")]
@@ -36,7 +36,7 @@ public class EnemyChase : MonoBehaviour
     // NavMeshAgent врага
 
     private EnemyRiotCharge riotCharge;
-    // Скрипт рывка громилы
+    // Скрипт рывка громилы, если он есть
 
     private float pathUpdateTimer;
     // Таймер обновления пути
